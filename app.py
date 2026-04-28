@@ -27,7 +27,7 @@ AVAILABLE_MODELS = {
 # ============================================
 # دالة الاتصال بـ Groq API (مصححة)
 # ============================================
-def chat_with_groq(messages, model="llama3-8b-8192"):
+def chat_with_groq(messages, model="llama-3.3-70b-versatile"):
     """الاتصال بـ Groq API مع معالجة الأخطاء"""
     
     if not GROQ_API_KEY:
