@@ -1,9 +1,3 @@
-"""
-منصة مروم FM - الذكاء الاصطناعي المتكامل
-نسخة API مفتوحة - بدون قاعدة بيانات - بدون تسجيل دخول
-جميع الحقوق محفوظة © مروم FM
-"""
-
 from flask import Flask, render_template_string, request, jsonify, session
 from flask_cors import CORS
 import os
@@ -24,7 +18,7 @@ GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 # قائمة نماذج الذكاء الاصطناعي
 AVAILABLE_MODELS = {
-    "llama3-8b-8192": "🦙 مروم FM سريع",
+    "llama-3.3-70b-versatile": "🦙 مروم FM سريع",
     "llama3-70b-8192": "🚀 مروم FM فائق",
     "mixtral-8x7b-32768": "🧠 مروم FM متقدم",
     "gemma2-9b-it": "⚡ مروم FM متوازن"
