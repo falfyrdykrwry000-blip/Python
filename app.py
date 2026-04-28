@@ -1,4 +1,10 @@
-from flask import Flask, render_template_string, request, jsonify, session
+"""
+منصة مروم FM - الذكاء الاصطناعي المتكامل
+نسخة API مفتوحة - بدون قاعدة بيانات - بدون تسجيل دخول
+جميع الحقوق محفوظة © مروم FM
+"""
+
+from flask import Flask, render_template_string, request, jsonify
 from flask_cors import CORS
 import os
 import requests
@@ -16,22 +22,24 @@ CORS(app)
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-# قائمة نماذج الذكاء الاصطناعي
+# ✅ النماذج المحدثة (تم تغيير النموذج القديم وإزالة المدعومة)
 AVAILABLE_MODELS = {
-    "llama-3.3-70b-versatile": "🦙 مروم FM سريع",
-    "llama-3.3-70b-versatile": "🚀 مروم FM فائق",
-    "llama-3.3-70b-versatile": "🧠 مروم FM متقدم",
-    "llama-3.3-70b-versatile": "⚡ مروم FM متوازن"
+    "llama-3.3-70b-versatile": "🚀 مروم FM فائق (Llama 3.3 70B)",
+    "llama-3.2-3b-preview": "🦙 مروم FM سريع (Llama 3.2)",
+    "llama-3.1-8b-instant": "⚡ مروم FM متوازن (Llama 3.1)"
 }
+
+# تعيين النموذج الافتراضي إلى الأحدث
+DEFAULT_MODEL = "llama-3.3-70b-versatile"
 
 # ============================================
 # دالة الاتصال بـ Groq API (مصححة)
 # ============================================
-def chat_with_groq(messages, model="llama-3.3-70b-versatile"):
+def chat_with_groq(messages, model=DEFAULT_MODEL):
     """الاتصال بـ Groq API مع معالجة الأخطاء"""
     
     if not GROQ_API_KEY:
-        return "⚠️ عذراً، مفتاح API غير مضبوط. يرجى إضافة GROQ_API_KEY في المتغيرات البيئية."
+        return "⚠️ عذراً، مفتاح API غير مضبوط. يرجى التواصل مع الدعم الفني."
     
     # التحقق من صحة المفتاح (يجب أن يبدأ بـ gsk_)
     if not GROQ_API_KEY.startswith('gsk_'):
@@ -41,10 +49,6 @@ def chat_with_groq(messages, model="llama-3.3-70b-versatile"):
         "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json"
     }
-    
-    # التأكد من صيغة الرسائل
-    if not messages or not isinstance(messages, list):
-        messages = [{"role": "user", "content": "مرحباً"}]
     
     data = {
         "model": model,
@@ -58,13 +62,11 @@ def chat_with_groq(messages, model="llama-3.3-70b-versatile"):
     try:
         print(f"📤 إرسال طلب إلى Groq API مع نموذج: {model}")
         response = requests.post(GROQ_API_URL, headers=headers, json=data, timeout=60)
-        
         print(f"📥 استجابة API: {response.status_code}")
         
         if response.status_code == 200:
             result = response.json()
-            reply = result['choices'][0]['message']['content']
-            return reply
+            return result['choices'][0]['message']['content']
         else:
             error_detail = response.json() if response.text else {}
             error_msg = error_detail.get('error', {}).get('message', str(response.status_code))
@@ -79,7 +81,6 @@ def chat_with_groq(messages, model="llama-3.3-70b-versatile"):
         print(f"❌ خطأ غير متوقع: {str(e)}")
         return f"⚠️ خطأ تقني: {str(e)}"
 
-# Decorator لمفتاح API (للتطبيقات الخارجية)
 def api_key_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -90,7 +91,7 @@ def api_key_required(f):
     return decorated
 
 # ============================================
-# قالب HTML الرئيسي
+# القالب الرئيسي (مع الوضع الليلي والنهاري)
 # ============================================
 
 MAIN_TEMPLATE = '''
@@ -318,7 +319,7 @@ MAIN_TEMPLATE = '''
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header"><h3>⚙️ الإعدادات</h3><button class="close-menu" id="closeMenu">✕</button></div>
         <div class="sidebar-section"><h3>🎨 المظهر</h3><div class="theme-toggle" id="themeToggle"><span>🌙 ليلي</span><span>☀️ نهاري</span></div></div>
-        <div class="sidebar-section"><h3>🧠 النموذج</h3><select id="globalModel"><option value="llama3-8b-8192">🦙 سريع</option><option value="mixtral-8x7b-32768">🧠 متقدم</option><option value="gemma2-9b-it">⚡ متوازن</option></select></div>
+        <div class="sidebar-section"><h3>🧠 النموذج</h3><select id="globalModel"><option value="llama-3.3-70b-versatile">🚀 مروم FM فائق</option><option value="llama-3.2-3b-preview">🦙 مروم FM سريع</option><option value="llama-3.1-8b-instant">⚡ مروم FM متوازن</option></select></div>
         <div class="sidebar-section"><h3>🎛️ إعدادات</h3><div class="sidebar-item" onclick="clearChat()">🗑️ مسح المحادثة</div><div class="sidebar-item" onclick="window.location.reload()">🔄 تحديث</div></div>
         <div class="sidebar-section"><h3>🔗 الروابط</h3><div class="sidebar-item" onclick="showTab('chat')">💬 المحادثة</div><div class="sidebar-item" onclick="showTab('tools')">🛠️ الأدوات</div><div class="sidebar-item" onclick="showTab('docs')">📖 توثيق API</div></div>
     </div>
@@ -361,7 +362,7 @@ MAIN_TEMPLATE = '''
     </div>
     <div class="footer"><p>© 2026 مروم FM - جميع الحقوق محفوظة</p></div>
     <script>
-        let currentAction='summary';let currentModel='llama3-8b-8192';
+        let currentAction='summary';let currentModel='llama-3.3-70b-versatile';
         const menuBtn=document.getElementById('menuBtn'),sidebar=document.getElementById('sidebar'),closeMenu=document.getElementById('closeMenu'),overlay=document.getElementById('overlay');
         function openSidebar(){sidebar.classList.add('open');overlay.classList.add('active');}
         function closeSidebar(){sidebar.classList.remove('open');overlay.classList.remove('active');}
@@ -411,7 +412,7 @@ MAIN_TEMPLATE = '''
 '''
 
 # ============================================
-# المسارات
+# مسارات الويب
 # ============================================
 
 @app.route('/')
@@ -422,7 +423,7 @@ def index():
 def chat_send():
     data = request.get_json()
     user_message = data.get('message', '')
-    model = data.get('model', 'llama3-8b-8192')
+    model = data.get('model', DEFAULT_MODEL)
     
     if not user_message:
         return jsonify({"reply": "الرجاء كتابة رسالة"}), 200
@@ -452,7 +453,7 @@ def tool_run():
     return jsonify({"result": result})
 
 # ============================================
-# API للتطبيقات الخارجية
+# واجهة API الخارجية (لربط التطبيقات)
 # ============================================
 
 @app.route('/api/health', methods=['GET'])
@@ -460,6 +461,7 @@ def api_health():
     return jsonify({
         "status": "healthy",
         "api_key_configured": bool(GROQ_API_KEY and GROQ_API_KEY.startswith('gsk_')),
+        "default_model": DEFAULT_MODEL,
         "time": datetime.now().isoformat()
     })
 
@@ -472,7 +474,7 @@ def api_models():
 def api_chat():
     data = request.get_json()
     user_message = data.get('message', '')
-    model = data.get('model', 'llama3-8b-8192')
+    model = data.get('model', DEFAULT_MODEL)
     
     if not user_message:
         return jsonify({"error": "الرسالة مطلوبة"}), 400
@@ -506,10 +508,11 @@ def api_tool():
     return jsonify({"success": True, "result": result})
 
 # ============================================
-# التشغيل
+# تشغيل الخادم
 # ============================================
 if __name__ == '__main__':
-    print("🎙️ بدء تشغيل منصة مروم FM...")
+    print("🎙️ بدء تشغيل منصة مروم FM (النسخة المحدثة)...")
     print(f"🔑 مفتاح API: {'موجود ✅' if GROQ_API_KEY and GROQ_API_KEY.startswith('gsk_') else 'غير موجود ❌'}")
+    print(f"🧠 النموذج الافتراضي: {DEFAULT_MODEL}")
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
