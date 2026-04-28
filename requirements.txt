@@ -1,5 +1,0 @@
-Flask
-gunicorn
-pg8000
-flask-cors
-flask-limiter
