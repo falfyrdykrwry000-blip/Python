@@ -1,5 +1,6 @@
 Flask
 gunicorn
-requests
+pg8000
 flask-cors
-google-genai
+requests
+python-dotenv
