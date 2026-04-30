@@ -1,9 +1,3 @@
-"""
-منصة مروم FM - الذكاء الاصطناعي
-باستخدام Groq API (سريع ومجاني)
-جميع الحقوق محفوظة © مروم FM
-"""
-
 from flask import Flask, render_template_string, request, jsonify, Response
 from flask_cors import CORS
 import os
