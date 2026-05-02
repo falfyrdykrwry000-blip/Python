@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تعديل - {{ post.title }} - نبض الحدث</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #7c3aed;
+            --dark: #0f172a;
+            --light: #f8fafc;
+            --gray: #64748b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.2);
+            --radius-sm: 10px;
+            --radius-md: 15px;
+            --radius-lg: 20px;
+            --radius-full: 50px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: #f1f5f9;
+            color: var(--dark);
+            line-height: 1.8;
+            min-height: 100vh;
+        }
+
+        .main-header {
+            background: var(--gradient-1);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .nav-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo i { font-size: 1.6rem; color: #fbbf24; }
+
+        .nav-links { display: flex; gap: 1rem; align-items: center; list-style: none; }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-full);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9rem;
+        }
+
+        .nav-links a:hover { background: rgba(255,255,255,0.2); }
+
+        .container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .page-header h1 {
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .post-meta-info {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            font-size: 0.85rem;
+            color: var(--gray);
+        }
+
+        .post-meta-info span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn {
+            padding: 0.6rem 1.4rem;
+            border: none;
+            border-radius: var(--radius-full);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Tajawal', sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background: var(--gradient-1);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-outline {
+            background: white;
+            border: 2px solid #e2e8f0;
+            color: var(--dark);
+        }
+
+        .btn-outline:hover { background: #f8fafc; border-color: #cbd5e1; }
+
+        .btn-danger {
+            background: white;
+            border: 2px solid #fecaca;
+            color: var(--danger);
+        }
+
+        .btn-danger:hover { background: #fef2f2; border-color: #fca5a5; }
+
+        .editor-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+        }
+
+        .editor-tabs {
+            display: flex;
+            border-bottom: 2px solid #e2e8f0;
+            background: #f8fafc;
+        }
+
+        .editor-tab {
+            padding: 0.8rem 1.5rem;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--gray);
+            border: none;
+            background: none;
+            font-family: 'Tajawal', sans-serif;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .editor-tab:hover { color: var(--dark); }
+        .editor-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .editor-body { padding: 2rem; }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .form-group { margin-bottom: 1.5rem; }
+
+        .form-group label {
+            display: block;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--dark);
+        }
+
+        .form-group label .required { color: var(--danger); }
+
+        .form-control {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: var(--radius-md);
+            font-family: 'Tajawal', sans-serif;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+            background: #f8fafc;
+            color: var(--dark);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+        }
+
+        select.form-control {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: left 1rem center;
+            padding-left: 2.5rem;
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 350px;
+            font-size: 1rem;
+            line-height: 1.9;
+        }
+
+        .markdown-preview {
+            min-height: 350px;
+            padding: 1.5rem;
+            border: 2px solid #e2e8f0;
+            border-radius: var(--radius-md);
+            background: white;
+            line-height: 2;
+            display: none;
+            overflow-y: auto;
+            max-height: 600px;
+        }
+
+        .markdown-preview.active { display: block; }
+        .markdown-preview h2 { color: var(--primary); margin: 1rem 0; }
+        .markdown-preview pre { background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px; overflow-x: auto; direction: ltr; text-align: left; }
+
+        .char-count {
+            text-align: left;
+            font-size: 0.8rem;
+            color: var(--gray);
+            margin-top: 0.3rem;
+        }
+
+        .publish-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: var(--radius-md);
+            margin-top: 1rem;
+        }
+
+        .switch {
+            position: relative;
+            width: 50px;
+            height: 28px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #cbd5e1;
+            border-radius: 28px;
+            transition: 0.3s;
+        }
+
+        .slider::before {
+            content: '';
+            position: absolute;
+            height: 22px;
+            width: 22px;
+            right: 3px;
+            bottom: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+
+        .switch input:checked + .slider { background: var(--success); }
+        .switch input:checked + .slider::before { transform: translateX(-22px); }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 1.5rem;
+            border-top: 2px solid #e2e8f0;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .info-box {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: var(--radius-md);
+            padding: 1rem 1.2rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            color: #3b82f6;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .alerts-container {
+            position: fixed;
+            top: 90px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius-md);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            animation: slideIn 0.4s ease;
+            box-shadow: var(--shadow-lg);
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .alert-success { background: #dcfce7; color: #166534; border-right: 4px solid #22c55e; }
+        .alert-danger { background: #fee2e2; color: #991b1b; border-right: 4px solid #ef4444; }
+        .alert-warning { background: #fef3c7; color: #92400e; border-right: 4px solid #f59e0b; }
+
+        .close-alert {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            cursor: pointer;
+            margin-right: auto;
+            opacity: 0.7;
+            color: inherit;
+        }
+
+        @media (max-width: 768px) {
+            .form-row { grid-template-columns: 1fr; }
+            .editor-body { padding: 1.5rem; }
+            .form-actions { flex-direction: column; }
+            .form-actions .btn { width: 100%; justify-content: center; }
+            .page-header { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <header class="main-header">
+        <nav class="nav-container">
+            <a href="{{ url_for('index') }}" class="logo">
+                <i class="fas fa-globe-americas"></i> نبض الحدث
+            </a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('admin') }}"><i class="fas fa-arrow-right"></i> لوحة التحكم</a></li>
+                <li><a href="{{ url_for('view_post', post_id=post.id) }}" target="_blank">
+                    <i class="fas fa-eye"></i> معاينة
+                </a></li>
+            </ul>
+        </nav>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="alerts-container">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' }}"></i>
+                        <span>{{ message }}</span>
+                        <button class="close-alert" onclick="this.parentElement.remove()">&times;</button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="container">
+        <div class="page-header">
+            <div>
+                <h1><i class="fas fa-edit" style="color: var(--primary);"></i> تعديل المقال</h1>
+                <div class="post-meta-info">
+                    <span><i class="far fa-calendar-alt"></i> {{ post.created_at[:10] }}</span>
+                    <span><i class="far fa-eye"></i> {{ post.views }} مشاهدة</span>
+                    <span>
+                        <span class="status-badge" style="padding:0.2rem 0.7rem;border-radius:20px;font-size:0.8rem;
+                            {% if post.published %}background:#dcfce7;color:#166534;{% else %}background:#fef3c7;color:#92400e;{% endif %}">
+                            {{ 'منشور' if post.published else 'مسودة' }}
+                        </span>
+                    </span>
+                </div>
+            </div>
+            <a href="{{ url_for('admin') }}" class="btn btn-outline">
+                <i class="fas fa-arrow-right"></i> العودة للمقالات
+            </a>
+        </div>
+
+        <div class="info-box">
+            <i class="fas fa-info-circle"></i>
+            <span>آخر تحديث: {{ post.created_at[:10] }} | رقم المقال: #{{ post.id }}</span>
+        </div>
+
+        <div class="editor-card">
+            <div class="editor-tabs">
+                <button class="editor-tab active" onclick="switchTab('write')" id="tabWrite">
+                    <i class="fas fa-edit"></i> تحرير
+                </button>
+                <button class="editor-tab" onclick="switchTab('preview')" id="tabPreview">
+                    <i class="fas fa-eye"></i> معاينة
+                </button>
+            </div>
+
+            <form method="POST" id="editForm">
+                <div class="editor-body">
+                    <!-- العنوان -->
+                    <div class="form-group">
+                        <label for="title">العنوان <span class="required">*</span></label>
+                        <input type="text" id="title" name="title" class="form-control" 
+                               value="{{ post.title }}" required maxlength="200"
+                               oninput="updateCharCount('titleCount', this.value, 200)">
+                        <span class="char-count" id="titleCount">{{ post.title|length }} / 200</span>
+                    </div>
+
+                    <!-- تصنيف + وسوم -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="category">التصنيف</label>
+                            <select id="category" name="category" class="form-control">
+                                {% set categories = ['عام', 'تقنية', 'سياسة', 'رياضة', 'ثقافة', 'صحة', 'اقتصاد', 'علوم'] %}
+                                {% for cat in categories %}
+                                <option value="{{ cat }}" {% if post.category == cat %}selected{% endif %}>
+                                    {{ cat }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="tags">الوسوم</label>
+                            <input type="text" id="tags" name="tags" class="form-control" 
+                                   value="{{ post.tags or '' }}" placeholder="تقنية, برمجة, ذكاء اصطناعي">
+                        </div>
+                    </div>
+
+                    <!-- الملخص -->
+                    <div class="form-group">
+                        <label for="summary">الملخص</label>
+                        <textarea id="summary" name="summary" class="form-control" 
+                                  rows="2" maxlength="300"
+                                  oninput="updateCharCount('summaryCount', this.value, 300)">{{ post.summary or '' }}</textarea>
+                        <span class="char-count" id="summaryCount">{{ (post.summary or '')|length }} / 300</span>
+                    </div>
+
+                    <!-- الصورة -->
+                    <div class="form-group">
+                        <label for="image_url">رابط الصورة الرئيسية</label>
+                        <input type="url" id="image_url" name="image_url" class="form-control" 
+                               value="{{ post.image_url or '' }}" placeholder="https://example.com/image.jpg">
+                        {% if post.image_url %}
+                        <div style="margin-top:0.5rem;">
+                            <img src="{{ post.image_url }}" alt="الصورة الحالية" 
+                                 style="max-width:200px; max-height:120px; border-radius:8px; object-fit:cover;">
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- المحتوى -->
+                    <div class="form-group">
+                        <label for="content">المحتوى <span class="required">*</span></label>
+                        <textarea id="content" name="content" class="form-control" 
+                                  rows="18" required oninput="updatePreview()">{{ post.content }}</textarea>
+                        <div class="markdown-preview" id="preview"></div>
+                    </div>
+
+                    <!-- حالة النشر -->
+                    <div class="publish-toggle">
+                        <label class="switch">
+                            <input type="checkbox" name="published" {% if post.published %}checked{% endif %}>
+                            <span class="slider"></span>
+                        </label>
+                        <span style="font-weight:600;">
+                            {% if post.published %}
+                            المقال منشور حالياً
+                            {% else %}
+                            المقال مسودة
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- أزرار الإجراءات -->
+                <div class="form-actions" style="padding: 1.5rem 2rem;">
+                    <div>
+                        <a href="{{ url_for('delete_post', post_id=post.id) }}" 
+                           class="btn btn-danger"
+                           onclick="return confirm('هل أنت متأكد من حذف هذا المقال؟ لا يمكن التراجع عن هذا الإجراء.')">
+                            <i class="fas fa-trash"></i> حذف المقال
+                        </a>
+                    </div>
+                    <div style="display:flex; gap:1rem;">
+                        <a href="{{ url_for('admin') }}" class="btn btn-outline">إلغاء</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> حفظ التغييرات
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // تبديل التبويب
+        function switchTab(tab) {
+            const writeTab = document.getElementById('tabWrite');
+            const previewTab = document.getElementById('tabPreview');
+            const textarea = document.getElementById('content');
+            const preview = document.getElementById('preview');
+
+            if (tab === 'write') {
+                writeTab.classList.add('active');
+                previewTab.classList.remove('active');
+                textarea.style.display = 'block';
+                preview.classList.remove('active');
+            } else {
+                previewTab.classList.add('active');
+                writeTab.classList.remove('active');
+                textarea.style.display = 'none';
+                preview.classList.add('active');
+                updatePreview();
+            }
+        }
+
+        // معاينة ماركداون
+        function updatePreview() {
+            const content = document.getElementById('content').value;
+            const preview = document.getElementById('preview');
+            
+            let html = content
+                .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+                .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+                .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                .replace(/`(.+?)`/g, '<code>$1</code>')
+                .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+                .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;">')
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>');
+            
+            html = '<p>' + html + '</p>';
+            preview.innerHTML = html || '<p style="color:#94a3b8;">ستظهر المعاينة هنا...</p>';
+        }
+
+        // عداد الأحرف
+        function updateCharCount(elementId, text, max) {
+            document.getElementById(elementId).textContent = text.length + ' / ' + max;
+            document.getElementById(elementId).style.color = text.length > max * 0.9 ? '#ef4444' : '#64748b';
+        }
+
+        // اختصار Ctrl+S
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                document.getElementById('editForm').submit();
+            }
+        });
+
+        // إخفاء التنبيهات
+        setTimeout(function() {
+            document.querySelectorAll('.alert').forEach(function(alert) {
+                alert.style.animation = 'slideOut 0.4s ease forwards';
+                setTimeout(function() { alert.remove(); }, 400);
+            });
+        }, 5000);
+
+        // تحذير قبل المغادرة
+        let formChanged = false;
+        document.querySelectorAll('input, textarea, select').forEach(el => {
+            el.addEventListener('input', () => { formChanged = true; });
+        });
+        
+        document.getElementById('editForm').addEventListener('submit', () => { formChanged = false; });
+        
+        window.addEventListener('beforeunload', function(e) {
+            if (formChanged) {
+                e.preventDefault();
+                e.returnValue = 'لديك تغييرات غير محفوظة. هل تريد المغادرة؟';
+                return e.returnValue;
+            }
+        });
+    </script>
+</body>
+</html>
