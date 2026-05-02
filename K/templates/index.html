@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الرئيسية - نبض الحدث</title>
+    <!-- الخطوط العربية -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #7c3aed;
+            --accent: #06b6d4;
+            --dark: #0f172a;
+            --light: #f8fafc;
+            --gray: #64748b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-2: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --gradient-3: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.2);
+            --shadow-xl: 0 20px 50px rgba(0,0,0,0.3);
+            --radius-sm: 10px;
+            --radius-md: 15px;
+            --radius-lg: 20px;
+            --radius-full: 50px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: #f1f5f9;
+            color: var(--dark);
+            line-height: 1.8;
+            min-height: 100vh;
+        }
+
+        /* ===== الهيدر ===== */
+        .main-header {
+            background: var(--gradient-1);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .nav-container {
+            max-width: 1300px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: white;
+            text-decoration: none;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo i { font-size: 2rem; color: #fbbf24; }
+
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1.2rem;
+            border-radius: var(--radius-full);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.95rem;
+        }
+
+        .nav-links a:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-2px);
+        }
+
+        .btn-login {
+            background: rgba(255,255,255,0.3) !important;
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+
+        .btn-login:hover {
+            background: white !important;
+            color: var(--primary) !important;
+            border-color: white;
+        }
+
+        .btn-register {
+            background: white !important;
+            color: var(--primary) !important;
+            font-weight: 700;
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-register:hover {
+            background: #fbbf24 !important;
+            color: var(--dark) !important;
+        }
+
+        .user-menu {
+            position: relative;
+        }
+
+        .user-menu-btn {
+            cursor: pointer;
+            background: rgba(255,255,255,0.2);
+            padding: 0.5rem 1.2rem;
+            border-radius: var(--radius-full);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: white;
+            font-weight: 500;
+        }
+
+        .dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: white;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-xl);
+            min-width: 200px;
+            margin-top: 10px;
+            overflow: hidden;
+            list-style: none;
+        }
+
+        .user-menu:hover .dropdown { display: block; }
+
+        .dropdown li a {
+            color: var(--dark) !important;
+            padding: 0.8rem 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-radius: 0;
+        }
+
+        .dropdown li a:hover {
+            background: #f1f5f9;
+            color: var(--primary) !important;
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.8rem;
+            cursor: pointer;
+        }
+
+        /* ===== الهيرو ===== */
+        .hero {
+            background: var(--gradient-2);
+            padding: 5rem 2rem;
+            text-align: center;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 60%);
+            animation: rotate 25s linear infinite;
+        }
+
+        @keyframes rotate {
+            100% { transform: rotate(360deg); }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .hero h1 {
+            font-size: 2.8rem;
+            font-weight: 900;
+            margin-bottom: 1rem;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            opacity: 0.95;
+            margin-bottom: 2rem;
+        }
+
+        .search-form {
+            max-width: 550px;
+            margin: 0 auto;
+            display: flex;
+            box-shadow: var(--shadow-xl);
+            border-radius: var(--radius-full);
+            overflow: hidden;
+        }
+
+        .search-form input {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            border: none;
+            font-family: 'Tajawal', sans-serif;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .search-form button {
+            padding: 1rem 1.8rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: background 0.3s;
+        }
+
+        .search-form button:hover {
+            background: var(--primary-dark);
+        }
+
+        /* ===== الحاوية ===== */
+        .container {
+            max-width: 1300px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        /* ===== شريط التصنيفات ===== */
+        .categories-bar {
+            display: flex;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+            margin-bottom: 2.5rem;
+            padding: 1rem 1.5rem;
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .category-tag {
+            padding: 0.5rem 1.3rem;
+            background: #f1f5f9;
+            color: var(--gray);
+            text-decoration: none;
+            border-radius: var(--radius-full);
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        .category-tag:hover {
+            background: #e2e8f0;
+            color: var(--dark);
+            transform: translateY(-2px);
+        }
+
+        .category-tag.active {
+            background: var(--gradient-1);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        /* ===== شبكة المقالات ===== */
+        .posts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+
+        .post-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s;
+        }
+
+        .post-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .post-image {
+            height: 220px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .post-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s;
+        }
+
+        .post-card:hover .post-image img {
+            transform: scale(1.1);
+        }
+
+        .post-image-placeholder {
+            background: var(--gradient-3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .post-image-placeholder i {
+            font-size: 4rem;
+            color: rgba(255,255,255,0.6);
+        }
+
+        .post-body {
+            padding: 1.5rem;
+        }
+
+        .post-category {
+            display: inline-block;
+            background: var(--gradient-1);
+            color: white;
+            padding: 0.3rem 1rem;
+            border-radius: var(--radius-full);
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-bottom: 0.8rem;
+        }
+
+        .post-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            line-height: 1.5;
+        }
+
+        .post-title a {
+            color: var(--dark);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .post-title a:hover {
+            color: var(--primary);
+        }
+
+        .post-summary {
+            color: var(--gray);
+            font-size: 0.95rem;
+            margin-bottom: 1.2rem;
+            line-height: 1.7;
+        }
+
+        .post-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--gray);
+            font-size: 0.85rem;
+            margin-bottom: 1.2rem;
+            padding-bottom: 1.2rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .post-stats {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .post-stats span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .read-more {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: gap 0.3s;
+        }
+
+        .read-more:hover {
+            gap: 12px;
+        }
+
+        /* ===== حالة فارغة ===== */
+        .empty-state {
+            text-align: center;
+            padding: 5rem 2rem;
+            grid-column: 1 / -1;
+        }
+
+        .empty-state i {
+            font-size: 5rem;
+            color: #cbd5e1;
+            margin-bottom: 1.5rem;
+        }
+
+        .empty-state h3 {
+            font-size: 1.5rem;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state p {
+            color: var(--gray);
+            margin-bottom: 1.5rem;
+        }
+
+        .btn {
+            padding: 0.7rem 2rem;
+            border: none;
+            border-radius: var(--radius-full);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Tajawal', sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            background: var(--gradient-1);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* ===== الترقيم ===== */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 3rem;
+        }
+
+        .page-btn {
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border-radius: var(--radius-sm);
+            color: var(--dark);
+            text-decoration: none;
+            font-weight: 600;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s;
+        }
+
+        .page-btn:hover {
+            background: #e2e8f0;
+        }
+
+        .page-btn.active {
+            background: var(--gradient-1);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .page-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        /* ===== الفوتر ===== */
+        .main-footer {
+            background: var(--dark);
+            color: #cbd5e1;
+            padding: 3rem 2rem 1rem;
+            margin-top: 4rem;
+        }
+
+        .footer-container {
+            max-width: 1300px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .footer-section h3,
+        .footer-section h4 {
+            color: white;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .footer-section h3 {
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .footer-section h3 i { color: #fbbf24; }
+
+        .footer-section ul {
+            list-style: none;
+        }
+
+        .footer-section ul li {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-section ul li a {
+            color: #94a3b8;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer-section ul li a:hover {
+            color: white;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .social-links a {
+            width: 40px;
+            height: 40px;
+            background: #334155;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .social-links a:hover {
+            background: var(--gradient-1);
+            transform: translateY(-3px);
+        }
+
+        .newsletter-form {
+            display: flex;
+            margin-top: 1rem;
+            border-radius: var(--radius-full);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+        }
+
+        .newsletter-form input {
+            flex: 1;
+            padding: 0.7rem 1.2rem;
+            border: none;
+            font-family: 'Tajawal', sans-serif;
+            outline: none;
+            background: #334155;
+            color: white;
+        }
+
+        .newsletter-form input::placeholder {
+            color: #94a3b8;
+        }
+
+        .newsletter-form button {
+            padding: 0.7rem 1.3rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .newsletter-form button:hover {
+            background: var(--primary-dark);
+        }
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 2rem;
+            border-top: 1px solid #334155;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .footer-bottom .fa-heart {
+            animation: heartbeat 1.5s ease infinite;
+        }
+
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1); }
+            25% { transform: scale(1.3); }
+            50% { transform: scale(1); }
+            75% { transform: scale(1.3); }
+        }
+
+        /* ===== التنبيهات ===== */
+        .alerts-container {
+            position: fixed;
+            top: 90px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            max-width: 400px;
+        }
+
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius-md);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            animation: slideIn 0.4s ease;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .alert-success { background: #dcfce7; color: #166534; border-right: 4px solid #22c55e; }
+        .alert-danger { background: #fee2e2; color: #991b1b; border-right: 4px solid #ef4444; }
+        .alert-warning { background: #fef3c7; color: #92400e; border-right: 4px solid #f59e0b; }
+        .alert-info { background: #dbeafe; color: #1e40af; border-right: 4px solid #3b82f6; }
+
+        .close-alert {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            cursor: pointer;
+            margin-right: auto;
+            opacity: 0.7;
+            transition: opacity 0.3s;
+            color: inherit;
+        }
+
+        .close-alert:hover { opacity: 1; }
+
+        /* ===== تجاوب ===== */
+        @media (max-width: 768px) {
+            .main-header {
+                padding: 0.8rem 1rem;
+            }
+            
+            .logo {
+                font-size: 1.3rem;
+            }
+            
+            .logo i {
+                font-size: 1.5rem;
+            }
+            
+            .mobile-menu-btn {
+                display: block;
+            }
+            
+            .nav-links {
+                display: none;
+                position: absolute;
+                top: 100%;
+                right: 0;
+                left: 0;
+                background: var(--gradient-1);
+                flex-direction: column;
+                padding: 1rem;
+                gap: 0.5rem;
+                box-shadow: var(--shadow-lg);
+            }
+            
+            .nav-links.show {
+                display: flex;
+            }
+            
+            .hero {
+                padding: 3rem 1.5rem;
+            }
+            
+            .hero h1 {
+                font-size: 2rem;
+            }
+            
+            .hero p {
+                font-size: 1rem;
+            }
+            
+            .posts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .post-image {
+                height: 180px;
+            }
+            
+            .footer-container {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            
+            .alerts-container {
+                right: 10px;
+                left: 10px;
+                max-width: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .categories-bar {
+                gap: 0.5rem;
+                padding: 0.8rem;
+            }
+            
+            .category-tag {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.8rem;
+            }
+            
+            .post-meta {
+                flex-direction: column;
+                gap: 0.5rem;
+                align-items: flex-start;
+            }
+            
+            .post-stats {
+                gap: 0.8rem;
+            }
+            
+            .search-form input {
+                padding: 0.8rem 1rem;
+            }
+            
+            .search-form button {
+                padding: 0.8rem 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ===== الهيدر ===== -->
+    <header class="main-header">
+        <nav class="nav-container">
+            <a href="{{ url_for('index') }}" class="logo">
+                <i class="fas fa-globe-americas"></i> نبض الحدث
+            </a>
+            
+            <button class="mobile-menu-btn" onclick="document.querySelector('.nav-links').classList.toggle('show')" aria-label="القائمة">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+            <ul class="nav-links">
+                <li><a href="{{ url_for('index') }}"><i class="fas fa-home"></i> الرئيسية</a></li>
+                
+                {% if session.user_id %}
+                    {% if session.is_admin %}
+                        <li><a href="{{ url_for('admin') }}"><i class="fas fa-cog"></i> لوحة التحكم</a></li>
+                        <li><a href="{{ url_for('new_post') }}"><i class="fas fa-plus-circle"></i> مقال جديد</a></li>
+                    {% endif %}
+                    <li class="user-menu">
+                        <a href="#" class="user-menu-btn">
+                            <i class="fas fa-user"></i> {{ session.username }}
+                            <i class="fas fa-chevron-down"></i>
+                        </a>
+                        <ul class="dropdown">
+                            <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a></li>
+                        </ul>
+                    </li>
+                {% else %}
+                    <li><a href="{{ url_for('login') }}" class="btn-login"><i class="fas fa-sign-in-alt"></i> دخول</a></li>
+                    <li><a href="{{ url_for('register') }}" class="btn-register"><i class="fas fa-user-plus"></i> تسجيل</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </header>
+
+    <!-- ===== التنبيهات ===== -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="alerts-container">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' if category == 'danger' else 'info-circle' }}"></i>
+                        <span>{{ message }}</span>
+                        <button class="close-alert" onclick="this.parentElement.remove()">&times;</button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- ===== الهيرو ===== -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1>مرحباً بكم في نبض الحدث</h1>
+            <p>أحدث الأخبار والمقالات التقنية والثقافية والاجتماعية</p>
+            
+            <form action="{{ url_for('search') }}" class="search-form">
+                <input type="text" name="q" placeholder="ابحث عن مقال..." value="{{ search_query or '' }}">
+                <button type="submit"><i class="fas fa-search"></i></button>
+            </form>
+        </div>
+    </section>
+
+    <div class="container">
+        <!-- ===== شريط التصنيفات ===== -->
+        {% if categories %}
+        <div class="categories-bar">
+            <a href="{{ url_for('index') }}" class="category-tag {% if not current_category %}active{% endif %}">
+                الكل
+            </a>
+            {% for cat in categories %}
+            <a href="{{ url_for('category_posts', category=cat.category) }}" 
+               class="category-tag {% if current_category == cat.category %}active{% endif %}">
+                {{ cat.category }}
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- ===== شبكة المقالات ===== -->
+        <div class="posts-grid">
+            {% if posts %}
+                {% for post in posts %}
+                <article class="post-card">
+                    {% if post.image_url %}
+                    <div class="post-image">
+                        <img src="{{ post.image_url }}" alt="{{ post.title }}" loading="lazy">
+                    </div>
+                    {% else %}
+                    <div class="post-image post-image-placeholder">
+                        <i class="fas fa-newspaper"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="post-body">
+                        <span class="post-category">{{ post.category }}</span>
+                        
+                        <h2 class="post-title">
+                            <a href="{{ url_for('view_post', post_id=post.id) }}">{{ post.title }}</a>
+                        </h2>
+                        
+                        <p class="post-summary">{{ post.summary or post.content[:150] }}...</p>
+                        
+                        <div class="post-meta">
+                            <span class="post-date">
+                                <i class="far fa-calendar-alt"></i> {{ post.created_at[:10] }}
+                            </span>
+                            <div class="post-stats">
+                                {% if post.views > 0 %}
+                                <span><i class="far fa-eye"></i> {{ post.views }}</span>
+                                {% endif %}
+                                <span><i class="far fa-comment"></i> {{ post.comment_count or 0 }}</span>
+                                <span><i class="far fa-heart"></i> {{ post.like_count or 0 }}</span>
+                            </div>
+                        </div>
+                        
+                        <a href="{{ url_for('view_post', post_id=post.id) }}" class="read-more">
+                            اقرأ المزيد <i class="fas fa-arrow-left"></i>
+                        </a>
+                    </div>
+                </article>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-newspaper"></i>
+                    <h3>لا توجد مقالات حالياً</h3>
+                    {% if search_query %}
+                    <p>لم نجد نتائج لـ "<strong>{{ search_query }}</strong>"</p>
+                    <a href="{{ url_for('index') }}" class="btn btn-primary">عرض جميع المقالات</a>
+                    {% else %}
+                    <p>سيتم نشر المقالات قريباً. تابعونا!</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- ===== الترقيم ===== -->
+        {% if posts and posts|length >= 9 %}
+        <div class="pagination">
+            <a href="#" class="page-btn disabled"><i class="fas fa-chevron-right"></i></a>
+            <a href="#" class="page-btn active">1</a>
+            <a href="#" class="page-btn">2</a>
+            <a href="#" class="page-btn">3</a>
+            <a href="#" class="page-btn"><i class="fas fa-chevron-left"></i></a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ===== الفوتر ===== -->
+    <footer class="main-footer">
+        <div class="footer-container">
+            <div class="footer-section">
+                <h3><i class="fas fa-globe-americas"></i> نبض الحدث</h3>
+                <p>مدونة عصرية تقدم أحدث الأخبار والمقالات في مختلف المجالات التقنية والثقافية والاجتماعية.</p>
+                <div class="social-links">
+                    <a href="#" aria-label="تويتر"><i class="fab fa-twitter"></i></a>
+                    <a href="#" aria-label="فيسبوك"><i class="fab fa-facebook"></i></a>
+                    <a href="#" aria-label="انستغرام"><i class="fab fa-instagram"></i></a>
+                    <a href="#" aria-label="يوتيوب"><i class="fab fa-youtube"></i></a>
+                </div>
+            </div>
+            
+            <div class="footer-section">
+                <h4>روابط سريعة</h4>
+                <ul>
+                    <li><a href="{{ url_for('index') }}">الرئيسية</a></li>
+                    <li><a href="#">من نحن</a></li>
+                    <li><a href="#">سياسة الخصوصية</a></li>
+                    <li><a href="#">اتصل بنا</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-section">
+                <h4>تصنيفات</h4>
+                <ul>
+                    <li><a href="{{ url_for('category_posts', category='تقنية') }}">تقنية</a></li>
+                    <li><a href="{{ url_for('category_posts', category='سياسة') }}">سياسة</a></li>
+                    <li><a href="{{ url_for('category_posts', category='رياضة') }}">رياضة</a></li>
+                    <li><a href="{{ url_for('category_posts', category='ثقافة') }}">ثقافة</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-section">
+                <h4>النشرة البريدية</h4>
+                <p>اشترك ليصلك كل جديد</p>
+                <form class="newsletter-form" onsubmit="event.preventDefault(); alert('شكراً لاشتراكك!');">
+                    <input type="email" placeholder="بريدك الإلكتروني" required>
+                    <button type="submit"><i class="fas fa-paper-plane"></i></button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="footer-bottom">
+            <p>© 2024 <i class="fas fa-heart" style="color: #ef4444;"></i> نبض الحدث - جميع الحقوق محفوظة</p>
+        </div>
+    </footer>
+
+    <script>
+        // إغلاق القائمة عند النقر خارجها
+        document.addEventListener('click', function(e) {
+            const navLinks = document.querySelector('.nav-links');
+            const menuBtn = document.querySelector('.mobile-menu-btn');
+            if (!e.target.closest('.nav-container') && navLinks.classList.contains('show')) {
+                navLinks.classList.remove('show');
+            }
+        });
+
+        // إخفاء التنبيهات تلقائياً بعد 5 ثواني
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                alert.style.animation = 'slideOut 0.4s ease forwards';
+                setTimeout(function() { alert.remove(); }, 400);
+            });
+        }, 5000);
+    </script>
+</body>
+</html>
