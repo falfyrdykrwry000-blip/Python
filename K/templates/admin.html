@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم - نبض الحدث</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #7c3aed;
+            --dark: #0f172a;
+            --light: #f8fafc;
+            --gray: #64748b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.2);
+            --radius-sm: 10px;
+            --radius-md: 15px;
+            --radius-lg: 20px;
+            --radius-full: 50px;
+            --sidebar-width: 260px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: #f1f5f9;
+            color: var(--dark);
+            line-height: 1.8;
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* ===== الشريط الجانبي ===== */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: white;
+            box-shadow: var(--shadow-lg);
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            text-align: center;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .sidebar-logo {
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: var(--dark);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-logo i { color: var(--primary); font-size: 1.6rem; }
+
+        .admin-badge {
+            background: var(--gradient-1);
+            color: white;
+            padding: 0.2rem 0.8rem;
+            border-radius: var(--radius-full);
+            font-size: 0.8rem;
+            display: inline-block;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0.8rem 1rem;
+            color: var(--gray);
+            text-decoration: none;
+            border-radius: var(--radius-sm);
+            margin-bottom: 0.3rem;
+            transition: all 0.3s;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .sidebar-nav a:hover {
+            background: #f1f5f9;
+            color: var(--dark);
+        }
+
+        .sidebar-nav a.active {
+            background: var(--gradient-1);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .sidebar-nav a i { width: 20px; text-align: center; }
+
+        .sidebar-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .sidebar-footer a {
+            color: #ef4444;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        /* ===== المحتوى الرئيسي ===== */
+        .main-content {
+            flex: 1;
+            margin-right: var(--sidebar-width);
+            min-height: 100vh;
+        }
+
+        .top-bar {
+            background: white;
+            padding: 1rem 2rem;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--dark);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: var(--gradient-1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .page-content {
+            padding: 2rem;
+        }
+
+        /* ===== بطاقات الإحصائيات ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .stat-icon {
+            width: 55px;
+            height: 55px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            color: white;
+        }
+
+        .stat-icon.posts { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+        .stat-icon.comments { background: linear-gradient(135deg, #10b981, #059669); }
+        .stat-icon.likes { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .stat-icon.views { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+
+        .stat-info h4 { font-size: 0.85rem; color: var(--gray); margin-bottom: 0.3rem; }
+        .stat-info span { font-size: 1.5rem; font-weight: 900; color: var(--dark); }
+
+        /* ===== جدول المقالات ===== */
+        .table-container {
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .table-header h2 { font-size: 1.3rem; }
+
+        .btn {
+            padding: 0.6rem 1.4rem;
+            border: none;
+            border-radius: var(--radius-full);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Tajawal', sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background: var(--gradient-1);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-sm {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.4rem;
+            border-radius: 50%;
+            transition: all 0.3s;
+            color: var(--gray);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 35px;
+            height: 35px;
+        }
+
+        .btn-icon:hover { background: #f1f5f9; }
+        .btn-icon.edit:hover { color: var(--primary); background: #eff6ff; }
+        .btn-icon.view:hover { color: var(--success); background: #f0fdf4; }
+        .btn-icon.delete:hover { color: var(--danger); background: #fef2f2; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead th {
+            background: #f8fafc;
+            padding: 1rem 1.5rem;
+            text-align: right;
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--gray);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        tbody td {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.9rem;
+        }
+
+        tbody tr:hover { background: #f8fafc; }
+
+        .post-title-cell {
+            font-weight: 600;
+            max-width: 250px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .category-badge {
+            background: #ede9fe;
+            color: #6d28d9;
+            padding: 0.2rem 0.7rem;
+            border-radius: var(--radius-full);
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-badge {
+            padding: 0.2rem 0.7rem;
+            border-radius: var(--radius-full);
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-published { background: #dcfce7; color: #166534; }
+        .status-draft { background: #fef3c7; color: #92400e; }
+
+        .actions { display: flex; gap: 0.3rem; }
+
+        /* ===== حالة فارغة ===== */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: #cbd5e1;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state h3 { margin-bottom: 0.5rem; }
+        .empty-state p { color: var(--gray); margin-bottom: 1.5rem; }
+
+        /* ===== التنبيهات ===== */
+        .alerts-container {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            max-width: 400px;
+        }
+
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius-md);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            animation: slideIn 0.4s ease;
+            box-shadow: var(--shadow-lg);
+            background: white;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .alert-success { border-right: 4px solid #22c55e; }
+        .alert-danger { border-right: 4px solid #ef4444; }
+        .alert-warning { border-right: 4px solid #f59e0b; }
+
+        .close-alert {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            cursor: pointer;
+            margin-right: auto;
+            opacity: 0.7;
+        }
+
+        /* ===== مودال الحذف ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.show { display: flex; }
+
+        .modal {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: var(--shadow-xl);
+        }
+
+        .modal i { font-size: 3rem; color: var(--danger); margin-bottom: 1rem; }
+        .modal h3 { margin-bottom: 0.5rem; }
+        .modal p { color: var(--gray); margin-bottom: 1.5rem; font-size: 0.9rem; }
+
+        .modal-actions { display: flex; gap: 1rem; justify-content: center; }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover { background: #dc2626; }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: var(--dark);
+        }
+
+        .btn-secondary:hover { background: #cbd5e1; }
+
+        /* ===== تجاوب ===== */
+        @media (max-width: 968px) {
+            .sidebar {
+                transform: translateX(100%);
+            }
+            
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-right: 0;
+            }
+            
+            .menu-toggle {
+                display: block;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            table { font-size: 0.8rem; }
+            thead th, tbody td { padding: 0.7rem 0.8rem; }
+        }
+
+        @media (max-width: 600px) {
+            .page-content { padding: 1rem; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .table-header { flex-direction: column; gap: 1rem; }
+            
+            table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+
+        /* ===== أوفرلاي للموبايل ===== */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 99;
+        }
+
+        .sidebar-overlay.show { display: block; }
+    </style>
+</head>
+<body>
+    <!-- ===== أوفرلاي الموبايل ===== -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <!-- ===== الشريط الجانبي ===== -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="{{ url_for('index') }}" class="sidebar-logo">
+                <i class="fas fa-globe-americas"></i> نبض الحدث
+            </a>
+            <span class="admin-badge"><i class="fas fa-shield-alt"></i> مدير النظام</span>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('admin') }}" class="active">
+                <i class="fas fa-tachometer-alt"></i> لوحة التحكم
+            </a>
+            <a href="{{ url_for('admin') }}">
+                <i class="fas fa-list"></i> جميع المقالات
+            </a>
+            <a href="{{ url_for('new_post') }}">
+                <i class="fas fa-plus-circle"></i> مقال جديد
+            </a>
+            <a href="{{ url_for('index') }}" target="_blank">
+                <i class="fas fa-external-link-alt"></i> معاينة المدونة
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <a href="{{ url_for('logout') }}">
+                <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+            </a>
+        </div>
+    </aside>
+
+    <!-- ===== المحتوى الرئيسي ===== -->
+    <div class="main-content">
+        <!-- الشريط العلوي -->
+        <div class="top-bar">
+            <button class="menu-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="user-info">
+                <span>{{ session.username }}</span>
+                <div class="user-avatar">
+                    {{ session.username[0] | upper if session.username else 'A' }}
+                </div>
+            </div>
+        </div>
+
+        <!-- محتوى الصفحة -->
+        <div class="page-content">
+            <!-- ===== التنبيهات ===== -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="alerts-container">
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}">
+                                <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' if category == 'danger' else 'info-circle' }}"></i>
+                                <span>{{ message }}</span>
+                                <button class="close-alert" onclick="this.parentElement.remove()">&times;</button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <!-- ===== بطاقات الإحصائيات ===== -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon posts">
+                        <i class="fas fa-newspaper"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>المقالات</h4>
+                        <span>{{ total_posts }}</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon comments">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>التعليقات</h4>
+                        <span>{{ total_comments }}</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon likes">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>الإعجابات</h4>
+                        <span>{{ total_likes }}</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon views">
+                        <i class="fas fa-eye"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>المشاهدات</h4>
+                        <span>{{ total_views or 0 }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== جدول المقالات ===== -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h2><i class="fas fa-list"></i> جميع المقالات</h2>
+                    <a href="{{ url_for('new_post') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> مقال جديد
+                    </a>
+                </div>
+
+                {% if posts %}
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>العنوان</th>
+                                <th>التصنيف</th>
+                                <th>الحالة</th>
+                                <th>التاريخ</th>
+                                <th>إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for post in posts %}
+                            <tr>
+                                <td>{{ post.id }}</td>
+                                <td class="post-title-cell" title="{{ post.title }}">{{ post.title }}</td>
+                                <td><span class="category-badge">{{ post.category }}</span></td>
+                                <td>
+                                    <span class="status-badge {{ 'status-published' if post.published else 'status-draft' }}">
+                                        {{ 'منشور' if post.published else 'مسودة' }}
+                                    </span>
+                                </td>
+                                <td>{{ post.created_at[:10] }}</td>
+                                <td>
+                                    <div class="actions">
+                                        <a href="{{ url_for('view_post', post_id=post.id) }}" 
+                                           class="btn-icon view" title="معاينة" target="_blank">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('edit_post', post_id=post.id) }}" 
+                                           class="btn-icon edit" title="تعديل">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button class="btn-icon delete" title="حذف" 
+                                                onclick="confirmDelete({{ post.id }}, '{{ post.title }}')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-pen-fancy"></i>
+                    <h3>لا توجد مقالات بعد</h3>
+                    <p>ابدأ بكتابة أول مقال لك الآن!</p>
+                    <a href="{{ url_for('new_post') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> إنشاء أول مقال
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== مودال تأكيد الحذف ===== -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h3>تأكيد الحذف</h3>
+            <p>هل أنت متأكد من حذف المقال "<strong id="deletePostTitle"></strong>"؟ لا يمكن التراجع عن هذا الإجراء.</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>
+                <a href="#" class="btn btn-danger" id="deleteConfirmBtn">
+                    <i class="fas fa-trash"></i> حذف
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== الشريط الجانبي =====
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('show');
+            document.getElementById('sidebarOverlay').classList.toggle('show');
+        }
+
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('show');
+            document.getElementById('sidebarOverlay').classList.remove('show');
+        }
+
+        // ===== مودال الحذف =====
+        function confirmDelete(postId, postTitle) {
+            document.getElementById('deletePostTitle').textContent = postTitle;
+            document.getElementById('deleteConfirmBtn').href = '/delete-post/' + postId;
+            document.getElementById('deleteModal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('deleteModal').classList.remove('show');
+        }
+
+        // إغلاق المودال عند النقر خارجه
+        document.getElementById('deleteModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // إغلاق المودال بمفتاح Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        // ===== إخفاء التنبيهات =====
+        setTimeout(function() {
+            document.querySelectorAll('.alert').forEach(function(alert) {
+                alert.style.animation = 'slideOut 0.4s ease forwards';
+                setTimeout(function() { alert.remove(); }, 400);
+            });
+        }, 5000);
+
+        // ===== إغلاق الشريط الجانبي عند النقر على رابط (موبايل) =====
+        document.querySelectorAll('.sidebar-nav a').forEach(function(link) {
+            link.addEventListener('click', function() {
+                if (window.innerWidth <= 968) {
+                    closeSidebar();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
