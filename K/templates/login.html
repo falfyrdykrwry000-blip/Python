@@ -24,6 +24,19 @@
             --radius-md: 15px;
             --radius-lg: 20px;
             --radius-full: 50px;
+            --bg: #e0e7ff;
+            --card-bg: white;
+            --text: var(--dark);
+            --border: #e2e8f0;
+            --input-bg: #f8fafc;
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #e2e8f0;
+            --border: #334155;
+            --input-bg: #1e293b;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -38,6 +51,11 @@
             padding: 1.5rem;
             position: relative;
             overflow: hidden;
+            transition: background 0.3s;
+        }
+
+        [data-theme="dark"] body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #1e293b 100%);
         }
 
         /* ===== خلفية متحركة ===== */
@@ -59,38 +77,27 @@
         }
 
         .shape:nth-child(1) {
-            width: 300px;
-            height: 300px;
+            width: 300px; height: 300px;
             background: var(--primary);
-            top: -100px;
-            right: -100px;
+            top: -100px; right: -100px;
             animation-delay: 0s;
         }
-
         .shape:nth-child(2) {
-            width: 200px;
-            height: 200px;
+            width: 200px; height: 200px;
             background: var(--secondary);
-            bottom: -50px;
-            left: -50px;
+            bottom: -50px; left: -50px;
             animation-delay: -5s;
         }
-
         .shape:nth-child(3) {
-            width: 150px;
-            height: 150px;
+            width: 150px; height: 150px;
             background: #06b6d4;
-            top: 50%;
-            left: 10%;
+            top: 50%; left: 10%;
             animation-delay: -10s;
         }
-
         .shape:nth-child(4) {
-            width: 250px;
-            height: 250px;
+            width: 250px; height: 250px;
             background: #f59e0b;
-            bottom: 20%;
-            right: 10%;
+            bottom: 20%; right: 10%;
             animation-delay: -15s;
         }
 
@@ -110,12 +117,13 @@
         }
 
         .auth-card {
-            background: white;
+            background: var(--card-bg);
             border-radius: var(--radius-lg);
             padding: 2.5rem;
             box-shadow: var(--shadow-xl);
             position: relative;
             overflow: hidden;
+            color: var(--text);
         }
 
         .auth-card::before {
@@ -145,39 +153,29 @@
             box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
         }
 
-        .auth-icon i {
-            font-size: 2rem;
-            color: white;
-        }
+        .auth-icon i { font-size: 2rem; color: white; }
 
         .auth-header h2 {
             font-size: 1.8rem;
             font-weight: 900;
-            color: var(--dark);
+            color: var(--text);
             margin-bottom: 0.5rem;
         }
 
-        .auth-header p {
-            color: var(--gray);
-            font-size: 0.95rem;
-        }
+        .auth-header p { color: var(--gray); font-size: 0.95rem; }
 
         /* ===== نموذج ===== */
-        .form-group {
-            margin-bottom: 1.3rem;
-        }
+        .form-group { margin-bottom: 1.3rem; }
 
         .form-group label {
             display: block;
             font-weight: 600;
             margin-bottom: 0.5rem;
-            color: var(--dark);
+            color: var(--text);
             font-size: 0.9rem;
         }
 
-        .input-wrapper {
-            position: relative;
-        }
+        .input-wrapper { position: relative; }
 
         .input-wrapper i {
             position: absolute;
@@ -187,29 +185,25 @@
             color: #94a3b8;
             transition: color 0.3s;
             font-size: 1.1rem;
+            pointer-events: none;
         }
 
         .input-wrapper input {
             width: 100%;
             padding: 0.9rem 1rem 0.9rem 3rem;
-            border: 2px solid #e2e8f0;
+            border: 2px solid var(--border);
             border-radius: var(--radius-md);
             font-family: 'Tajawal', sans-serif;
             font-size: 0.95rem;
             transition: all 0.3s;
-            background: #f8fafc;
+            background: var(--input-bg);
+            color: var(--text);
         }
 
         .input-wrapper input:focus {
             outline: none;
             border-color: var(--primary);
-            background: white;
             box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
-        }
-
-        .input-wrapper input:focus + i,
-        .input-wrapper input:focus ~ i {
-            color: var(--primary);
         }
 
         .password-toggle {
@@ -300,7 +294,7 @@
             content: '';
             flex: 1;
             height: 1px;
-            background: #e2e8f0;
+            background: var(--border);
         }
 
         .auth-divider span { padding: 0 1rem; }
@@ -314,9 +308,9 @@
         .social-btn {
             flex: 1;
             padding: 0.7rem;
-            border: 2px solid #e2e8f0;
+            border: 2px solid var(--border);
             border-radius: var(--radius-md);
-            background: white;
+            background: var(--card-bg);
             cursor: pointer;
             font-family: 'Tajawal', sans-serif;
             display: flex;
@@ -325,13 +319,18 @@
             gap: 8px;
             font-size: 0.9rem;
             transition: all 0.3s;
+            text-decoration: none;
+            color: var(--text);
         }
 
-        .social-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+        .social-btn:hover { background: var(--input-bg); border-color: #cbd5e1; }
         .social-btn.google { color: #ea4335; }
         .social-btn.google:hover { background: #fef2f2; border-color: #fca5a5; }
         .social-btn.github { color: #333; }
-        .social-btn.github:hover { background: #f8fafc; border-color: #94a3b8; }
+        .social-btn.github:hover { background: #f0f0f0; border-color: #94a3b8; }
+
+        [data-theme="dark"] .social-btn.github { color: #e2e8f0; }
+        [data-theme="dark"] .social-btn.github:hover { background: #1e293b; }
 
         .auth-footer {
             text-align: center;
@@ -354,11 +353,9 @@
             color: var(--gray);
             text-decoration: none;
             font-size: 0.9rem;
-            transition: color 0.3s;
         }
 
         .back-home:hover { color: var(--primary); }
-        .back-home i { margin-left: 5px; }
 
         /* ===== التنبيهات ===== */
         .alerts-container {
@@ -404,8 +401,6 @@
             padding: 0;
         }
 
-        .close-alert:hover { opacity: 1; }
-
         /* ===== تأثير التحميل ===== */
         .btn-loading {
             pointer-events: none;
@@ -425,9 +420,7 @@
         .btn-loading .spinner { display: inline-block; }
         .btn-loading .btn-text { display: none; }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         /* ===== تجاوب ===== */
         @media (max-width: 480px) {
@@ -482,7 +475,7 @@
                     <label for="username">اسم المستخدم</label>
                     <div class="input-wrapper">
                         <i class="fas fa-user"></i>
-                        <input type="text" id="username" name="username" 
+                        <input type="text" id="username" name="username"
                                placeholder="أدخل اسم المستخدم" required autocomplete="username">
                     </div>
                 </div>
@@ -491,7 +484,7 @@
                     <label for="password">كلمة المرور</label>
                     <div class="input-wrapper">
                         <i class="fas fa-lock"></i>
-                        <input type="password" id="password" name="password" 
+                        <input type="password" id="password" name="password"
                                placeholder="أدخل كلمة المرور" required autocomplete="current-password">
                         <button type="button" class="password-toggle" onclick="togglePassword()" tabindex="-1">
                             <i class="fas fa-eye" id="toggleIcon"></i>
@@ -519,12 +512,12 @@
             </div>
 
             <div class="social-login">
-                <button type="button" class="social-btn google" onclick="alert('سيتم تفعيل هذه الميزة قريباً')">
+                <a href="{{ url_for('google_login') }}" class="social-btn google">
                     <i class="fab fa-google"></i> قوقل
-                </button>
-                <button type="button" class="social-btn github" onclick="alert('سيتم تفعيل هذه الميزة قريباً')">
+                </a>
+                <a href="{{ url_for('github_login') }}" class="social-btn github">
                     <i class="fab fa-github"></i> جيت هب
-                </button>
+                </a>
             </div>
 
             <div class="auth-footer">
@@ -538,7 +531,15 @@
     </div>
 
     <script>
-        // إخفاء التنبيهات تلقائياً
+        // ===== الوضع الليلي =====
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+
+        // ===== إخفاء التنبيهات =====
         setTimeout(function() {
             document.querySelectorAll('.alert').forEach(function(alert) {
                 alert.style.animation = 'slideOut 0.4s ease forwards';
@@ -546,11 +547,10 @@
             });
         }, 5000);
 
-        // إظهار/إخفاء كلمة المرور
+        // ===== إظهار/إخفاء كلمة المرور =====
         function togglePassword() {
             const passwordInput = document.getElementById('password');
             const toggleIcon = document.getElementById('toggleIcon');
-            
             if (passwordInput.type === 'password') {
                 passwordInput.type = 'text';
                 toggleIcon.className = 'fas fa-eye-slash';
@@ -560,25 +560,18 @@
             }
         }
 
-        // تأثير التحميل عند الضغط
+        // ===== تأثير التحميل =====
         function handleSubmit(event) {
             const btn = document.getElementById('submitBtn');
             btn.classList.add('btn-loading');
-            
-            // إزالة تأثير التحميل بعد 3 ثواني إذا لم يتم التوجيه
-            setTimeout(function() {
-                btn.classList.remove('btn-loading');
-            }, 3000);
+            setTimeout(function() { btn.classList.remove('btn-loading'); }, 3000);
         }
 
-        // التركيز التلقائي على أول حقل فارغ
+        // ===== تركيز تلقائي =====
         document.addEventListener('DOMContentLoaded', function() {
             const username = document.getElementById('username');
-            if (!username.value) {
-                username.focus();
-            } else {
-                document.getElementById('password').focus();
-            }
+            if (!username.value) { username.focus(); }
+            else { document.getElementById('password').focus(); }
         });
     </script>
 </body>
