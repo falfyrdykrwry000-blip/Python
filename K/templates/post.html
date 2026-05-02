@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ post.title }} - نبض الحدث</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #7c3aed;
+            --dark: #0f172a;
+            --light: #f8fafc;
+            --gray: #64748b;
+            --danger: #ef4444;
+            --gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-2: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.2);
+            --shadow-xl: 0 20px 50px rgba(0,0,0,0.3);
+            --radius-sm: 10px;
+            --radius-md: 15px;
+            --radius-lg: 20px;
+            --radius-full: 50px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: #f1f5f9;
+            color: var(--dark);
+            line-height: 1.8;
+            min-height: 100vh;
+        }
+
+        /* ===== الهيدر ===== */
+        .main-header {
+            background: var(--gradient-1);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .nav-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo i { font-size: 1.8rem; color: #fbbf24; }
+
+        .nav-links { display: flex; gap: 1rem; align-items: center; list-style: none; }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1.2rem;
+            border-radius: var(--radius-full);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9rem;
+        }
+
+        .nav-links a:hover { background: rgba(255,255,255,0.2); }
+
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        /* ===== الحاوية ===== */
+        .container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        /* ===== المقال ===== */
+        .single-post {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 2.5rem;
+            box-shadow: var(--shadow-lg);
+            margin-bottom: 2rem;
+        }
+
+        .post-category {
+            display: inline-block;
+            background: var(--gradient-1);
+            color: white;
+            padding: 0.4rem 1.2rem;
+            border-radius: var(--radius-full);
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+        }
+
+        .single-post h1 {
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.4;
+            margin-bottom: 1.2rem;
+            color: var(--dark);
+        }
+
+        .post-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #e2e8f0;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .post-info { display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; }
+
+        .post-info span {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+
+        .post-actions { display: flex; gap: 0.8rem; align-items: center; }
+
+        .btn-like {
+            background: none;
+            border: 2px solid #e2e8f0;
+            padding: 0.6rem 1.3rem;
+            border-radius: var(--radius-full);
+            cursor: pointer;
+            font-family: 'Tajawal', sans-serif;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+            color: var(--gray);
+        }
+
+        .btn-like:hover { border-color: #fca5a5; color: #ef4444; }
+        .btn-like.liked { background: #fef2f2; border-color: #ef4444; color: #ef4444; }
+        .btn-like.liked i { animation: pop 0.3s ease; }
+
+        @keyframes pop {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.4); }
+        }
+
+        .btn-share {
+            background: #f1f5f9;
+            border: none;
+            padding: 0.6rem 1.3rem;
+            border-radius: var(--radius-full);
+            cursor: pointer;
+            font-family: 'Tajawal', sans-serif;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+            color: var(--gray);
+        }
+
+        .btn-share:hover { background: #e2e8f0; }
+
+        .post-tags {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+            margin: 1rem 0 1.5rem;
+        }
+
+        .tag {
+            background: #e0e7ff;
+            color: var(--primary);
+            padding: 0.3rem 1rem;
+            border-radius: var(--radius-full);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .post-featured-image {
+            margin: 1.5rem 0;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }
+
+        .post-featured-image img {
+            width: 100%;
+            max-height: 450px;
+            object-fit: cover;
+        }
+
+        .post-content {
+            font-size: 1.1rem;
+            line-height: 2;
+            color: #334155;
+        }
+
+        .post-content h1, .post-content h2, .post-content h3 { color: var(--dark); margin: 1.8rem 0 0.8rem; }
+        .post-content h2 { font-size: 1.6rem; border-right: 4px solid var(--primary); padding-right: 1rem; }
+        .post-content h3 { font-size: 1.3rem; }
+        .post-content p { margin-bottom: 1.2rem; }
+        .post-content ul, .post-content ol { margin: 1rem 1.5rem 1.2rem; }
+        .post-content li { margin-bottom: 0.5rem; }
+        .post-content a { color: var(--primary); text-decoration: underline; }
+        .post-content img { max-width: 100%; border-radius: var(--radius-md); margin: 1rem 0; }
+        .post-content blockquote {
+            background: #f8fafc;
+            border-right: 5px solid var(--secondary);
+            padding: 1.2rem 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 var(--radius-md) var(--radius-md) 0;
+            font-style: italic;
+            color: #475569;
+        }
+        .post-content code {
+            background: #f1f5f9;
+            padding: 0.2rem 0.5rem;
+            border-radius: 5px;
+            font-size: 0.9em;
+            direction: ltr;
+            display: inline-block;
+        }
+        .post-content pre {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 1.5rem;
+            border-radius: var(--radius-md);
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            direction: ltr;
+            text-align: left;
+        }
+        .post-content pre code { background: none; padding: 0; color: #e2e8f0; }
+        .post-content table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
+        .post-content th, .post-content td { border: 1px solid #e2e8f0; padding: 0.8rem; text-align: right; }
+        .post-content th { background: #f8fafc; font-weight: 700; }
+
+        /* ===== مقالات ذات صلة ===== */
+        .related-posts {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 2rem;
+        }
+
+        .related-posts h3 {
+            font-size: 1.4rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .related-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .related-card {
+            padding: 1.2rem;
+            background: #f8fafc;
+            border-radius: var(--radius-md);
+            text-decoration: none;
+            transition: all 0.3s;
+            display: block;
+        }
+
+        .related-card:hover { background: #e0e7ff; transform: translateY(-3px); }
+
+        .related-card h4 {
+            color: var(--dark);
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .related-card p {
+            color: var(--gray);
+            font-size: 0.85rem;
+        }
+
+        /* ===== التعليقات ===== */
+        .comments-section {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 2.5rem;
+            box-shadow: var(--shadow-md);
+        }
+
+        .comments-section h3 {
+            font-size: 1.4rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .comment-form {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: var(--radius-md);
+            margin-bottom: 2rem;
+        }
+
+        .comment-form h4 { margin-bottom: 1rem; }
+
+        .form-group { margin-bottom: 1rem; }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: var(--radius-md);
+            font-family: 'Tajawal', sans-serif;
+            font-size: 0.95rem;
+            transition: border-color 0.3s;
+            resize: vertical;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .btn {
+            padding: 0.7rem 1.8rem;
+            border: none;
+            border-radius: var(--radius-full);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Tajawal', sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            background: var(--gradient-1);
+            color: white;
+        }
+
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+
+        .comments-list { margin-top: 1.5rem; }
+
+        .comment {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: var(--radius-md);
+            margin-bottom: 1rem;
+            border-right: 4px solid var(--primary);
+        }
+
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .comment-header strong { color: var(--dark); }
+        .comment-header span { color: var(--gray); font-size: 0.85rem; }
+
+        .comment p { color: #475569; line-height: 1.7; }
+
+        .no-comments {
+            text-align: center;
+            color: var(--gray);
+            padding: 2rem;
+        }
+
+        /* ===== الفوتر ===== */
+        .main-footer {
+            background: var(--dark);
+            color: #94a3b8;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 3rem;
+        }
+
+        .main-footer p { font-size: 0.9rem; }
+        .main-footer .fa-heart { color: #ef4444; animation: heartbeat 1.5s ease infinite; }
+
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1); }
+            25% { transform: scale(1.3); }
+            50% { transform: scale(1); }
+            75% { transform: scale(1.3); }
+        }
+
+        /* ===== التنبيهات ===== */
+        .alerts-container {
+            position: fixed;
+            top: 90px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            max-width: 400px;
+        }
+
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius-md);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            animation: slideIn 0.4s ease;
+            box-shadow: var(--shadow-lg);
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .alert-success { background: #dcfce7; color: #166534; border-right: 4px solid #22c55e; }
+        .alert-danger { background: #fee2e2; color: #991b1b; border-right: 4px solid #ef4444; }
+        .alert-warning { background: #fef3c7; color: #92400e; border-right: 4px solid #f59e0b; }
+
+        .close-alert {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            cursor: pointer;
+            margin-right: auto;
+            opacity: 0.7;
+            color: inherit;
+        }
+
+        /* ===== تجاوب ===== */
+        @media (max-width: 768px) {
+            .main-header { padding: 0.8rem 1rem; }
+            .mobile-menu-btn { display: block; }
+            .nav-links { display: none; position: absolute; top: 100%; right: 0; left: 0; background: var(--gradient-1); flex-direction: column; padding: 1rem; }
+            .nav-links.show { display: flex; }
+            .single-post { padding: 1.5rem; }
+            .single-post h1 { font-size: 1.6rem; }
+            .post-meta { flex-direction: column; align-items: flex-start; }
+            .post-content { font-size: 1rem; }
+            .related-grid { grid-template-columns: 1fr; }
+            .comments-section { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- ===== الهيدر ===== -->
+    <header class="main-header">
+        <nav class="nav-container">
+            <a href="{{ url_for('index') }}" class="logo">
+                <i class="fas fa-globe-americas"></i> نبض الحدث
+            </a>
+            <button class="mobile-menu-btn" onclick="document.querySelector('.nav-links').classList.toggle('show')" aria-label="القائمة">
+                <i class="fas fa-bars"></i>
+            </button>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('index') }}"><i class="fas fa-home"></i> الرئيسية</a></li>
+                {% if session.user_id %}
+                    {% if session.is_admin %}
+                        <li><a href="{{ url_for('admin') }}"><i class="fas fa-cog"></i> لوحة التحكم</a></li>
+                    {% endif %}
+                    <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> خروج</a></li>
+                {% else %}
+                    <li><a href="{{ url_for('login') }}"><i class="fas fa-sign-in-alt"></i> دخول</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </header>
+
+    <!-- ===== التنبيهات ===== -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="alerts-container">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' }}"></i>
+                        <span>{{ message }}</span>
+                        <button class="close-alert" onclick="this.parentElement.remove()">&times;</button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="container">
+        <!-- ===== المقال ===== -->
+        <article class="single-post">
+            <span class="post-category">{{ post.category }}</span>
+            <h1>{{ post.title }}</h1>
+            
+            <div class="post-meta">
+                <div class="post-info">
+                    <span><i class="far fa-calendar-alt"></i> {{ post.created_at[:10] }}</span>
+                    <span><i class="far fa-eye"></i> {{ post.views }} مشاهدة</span>
+                    <span><i class="far fa-comment"></i> {{ comments|length }} تعليق</span>
+                </div>
+                <div class="post-actions">
+                    <button class="btn-like {% if liked %}liked{% endif %}" onclick="toggleLike({{ post.id }})" id="likeBtn">
+                        <i class="{% if liked %}fas{% else %}far{% endif %} fa-heart"></i>
+                        <span id="likes-count">{{ post.like_count }}</span>
+                    </button>
+                    <button class="btn-share" onclick="sharePost()">
+                        <i class="fas fa-share-alt"></i> مشاركة
+                    </button>
+                </div>
+            </div>
+
+            {% if post.tags %}
+            <div class="post-tags">
+                {% for tag in post.tags.split(',') %}
+                <span class="tag">{{ tag.strip() }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if post.image_url %}
+            <div class="post-featured-image">
+                <img src="{{ post.image_url }}" alt="{{ post.title }}">
+            </div>
+            {% endif %}
+
+            <div class="post-content">
+                {{ content_html | safe }}
+            </div>
+        </article>
+
+        <!-- ===== مقالات ذات صلة ===== -->
+        {% if related %}
+        <section class="related-posts">
+            <h3><i class="fas fa-link"></i> مقالات ذات صلة</h3>
+            <div class="related-grid">
+                {% for rel in related %}
+                <a href="{{ url_for('view_post', post_id=rel.id) }}" class="related-card">
+                    <h4>{{ rel.title }}</h4>
+                    <p>{{ rel.summary or rel.content[:80] }}...</p>
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- ===== التعليقات ===== -->
+        <section class="comments-section">
+            <h3><i class="fas fa-comments"></i> التعليقات ({{ comments|length }})</h3>
+            
+            <form action="{{ url_for('add_comment', post_id=post.id) }}" method="POST" class="comment-form">
+                <h4>أضف تعليقاً</h4>
+                <div class="form-group">
+                    <input type="text" name="author" placeholder="اسمك الكريم" required 
+                           value="{{ session.username or '' }}">
+                </div>
+                <div class="form-group">
+                    <textarea name="content" rows="3" placeholder="اكتب تعليقك هنا..." required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane"></i> نشر التعليق
+                </button>
+            </form>
+
+            <div class="comments-list">
+                {% if comments %}
+                    {% for comment in comments %}
+                    <div class="comment">
+                        <div class="comment-header">
+                            <strong><i class="fas fa-user-circle"></i> {{ comment.author }}</strong>
+                            <span><i class="far fa-clock"></i> {{ comment.created_at[:10] }}</span>
+                        </div>
+                        <p>{{ comment.content }}</p>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="no-comments">
+                        <i class="far fa-comment-dots" style="font-size: 3rem; display: block; margin-bottom: 0.5rem;"></i>
+                        لا توجد تعليقات بعد. كن أول من يعلق!
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+
+    <!-- ===== الفوتر ===== -->
+    <footer class="main-footer">
+        <p>© 2024 <i class="fas fa-heart"></i> نبض الحدث - جميع الحقوق محفوظة</p>
+    </footer>
+
+    <script>
+        // إخفاء التنبيهات تلقائياً
+        setTimeout(function() {
+            document.querySelectorAll('.alert').forEach(function(alert) {
+                alert.style.animation = 'slideOut 0.4s ease forwards';
+                setTimeout(function() { alert.remove(); }, 400);
+            });
+        }, 5000);
+
+        // إغلاق القائمة
+        document.addEventListener('click', function(e) {
+            const navLinks = document.querySelector('.nav-links');
+            if (!e.target.closest('.nav-container') && navLinks.classList.contains('show')) {
+                navLinks.classList.remove('show');
+            }
+        });
+
+        // الإعجاب
+        function toggleLike(postId) {
+            fetch('/like/' + postId, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const btn = document.getElementById('likeBtn');
+                        const countSpan = document.getElementById('likes-count');
+                        const icon = btn.querySelector('i');
+                        
+                        if (data.liked) {
+                            btn.classList.add('liked');
+                            icon.className = 'fas fa-heart';
+                        } else {
+                            btn.classList.remove('liked');
+                            icon.className = 'far fa-heart';
+                        }
+                        countSpan.textContent = data.count;
+                        
+                        // تأثير النبض
+                        icon.style.transform = 'scale(1.5)';
+                        setTimeout(() => { icon.style.transform = 'scale(1)'; }, 200);
+                    }
+                });
+        }
+
+        // المشاركة
+        function sharePost() {
+            if (navigator.share) {
+                navigator.share({
+                    title: '{{ post.title }}',
+                    url: window.location.href
+                });
+            } else {
+                navigator.clipboard.writeText(window.location.href);
+                alert('تم نسخ الرابط!');
+            }
+        }
+    </script>
+</body>
+</html>
