@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>500 - خطأ في الخادم | نبض الحدث</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --dark: #0f172a;
+            --light: #f8fafc;
+            --gray: #64748b;
+            --danger: #ef4444;
+            --gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.2);
+            --radius-lg: 20px;
+            --radius-full: 50px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: linear-gradient(135deg, #fef2f2 0%, #fff7ed 50%, #fefce8 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* ===== خلفية ===== */
+        .bg-pattern {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.03;
+            background-image: 
+                radial-gradient(circle at 20% 50%, #ef4444 10%, transparent 10%),
+                radial-gradient(circle at 80% 20%, #f59e0b 10%, transparent 10%),
+                radial-gradient(circle at 60% 80%, #ef4444 8%, transparent 8%);
+            background-size: 100px 100px;
+        }
+
+        /* ===== أيقونات متحركة ===== */
+        .floating-icons {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .floating-icon {
+            position: absolute;
+            font-size: 3rem;
+            opacity: 0.06;
+            animation: drift 15s infinite ease-in-out;
+            color: var(--danger);
+        }
+
+        .floating-icon:nth-child(1) { top: 15%; left: 10%; animation-delay: 0s; }
+        .floating-icon:nth-child(2) { top: 60%; left: 75%; animation-delay: -5s; font-size: 4rem; }
+        .floating-icon:nth-child(3) { top: 25%; left: 50%; animation-delay: -10s; font-size: 2.5rem; }
+
+        @keyframes drift {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(30px, -20px) rotate(15deg); }
+            66% { transform: translate(-20px, 15px) rotate(-10deg); }
+        }
+
+        /* ===== بطاقة الخطأ ===== */
+        .error-container {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            max-width: 550px;
+            width: 100%;
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 3rem 2rem;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        }
+
+        .error-icon {
+            margin-bottom: 1.5rem;
+            animation: shake 0.8s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 50%, 90% { transform: translateX(-8px); }
+            30%, 70% { transform: translateX(8px); }
+        }
+
+        .error-icon i {
+            font-size: 5rem;
+            color: var(--danger);
+        }
+
+        .error-code {
+            font-size: 5rem;
+            font-weight: 900;
+            color: #fecaca;
+            line-height: 1;
+            margin-bottom: 1rem;
+            letter-spacing: -2px;
+        }
+
+        .error-title {
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: var(--dark);
+            margin-bottom: 0.8rem;
+        }
+
+        .error-message {
+            font-size: 1rem;
+            color: var(--gray);
+            margin-bottom: 2rem;
+            line-height: 1.8;
+        }
+
+        .error-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.7rem 1.8rem;
+            border: none;
+            border-radius: var(--radius-full);
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Tajawal', sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            background: var(--gradient-1);
+            color: white;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn-outline {
+            background: white;
+            color: var(--dark);
+            border: 2px solid #e2e8f0;
+        }
+
+        .btn-outline:hover {
+            border-color: var(--primary);
+            background: #f8fafc;
+        }
+
+        /* ===== معلومات إضافية ===== */
+        .support-info {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #f1f5f9;
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+
+        .support-info i { color: #f59e0b; margin: 0 3px; }
+
+        /* ===== تجاوب ===== */
+        @media (max-width: 480px) {
+            .error-container { padding: 2rem 1.5rem; }
+            .error-code { font-size: 3.5rem; }
+            .error-icon i { font-size: 3.5rem; }
+            .error-title { font-size: 1.3rem; }
+            .error-actions { flex-direction: column; }
+            .btn { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+    <!-- ===== خلفية ===== -->
+    <div class="bg-pattern"></div>
+    
+    <div class="floating-icons">
+        <div class="floating-icon"><i class="fas fa-cog"></i></div>
+        <div class="floating-icon"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="floating-icon"><i class="fas fa-tools"></i></div>
+    </div>
+
+    <!-- ===== بطاقة الخطأ ===== -->
+    <div class="error-container">
+        <!-- أيقونة -->
+        <div class="error-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+
+        <!-- كود الخطأ -->
+        <div class="error-code">500</div>
+
+        <!-- العنوان -->
+        <h1 class="error-title">عذراً! حدث خطأ في الخادم</h1>
+
+        <!-- الرسالة -->
+        <p class="error-message">
+            حدث خطأ غير متوقع أثناء معالجة طلبك. قد يكون السبب مشكلة مؤقتة في الخادم. يرجى المحاولة مرة أخرى لاحقاً.
+        </p>
+
+        <!-- أزرار الإجراءات -->
+        <div class="error-actions">
+            <a href="{{ url_for('index') }}" class="btn btn-primary">
+                <i class="fas fa-home"></i> العودة للرئيسية
+            </a>
+            <a href="javascript:location.reload()" class="btn btn-outline">
+                <i class="fas fa-redo"></i> تحديث الصفحة
+            </a>
+        </div>
+
+        <!-- معلومات الدعم -->
+        <div class="support-info">
+            <p>
+                <i class="fas fa-info-circle"></i>
+                إذا استمرت المشكلة، يرجى التواصل مع فريق الدعم الفني.
+            </p>
+            <p style="margin-top:0.5rem;">
+                <i class="far fa-clock"></i> رمز الخطأ: #ERR_{{ range(1000, 9999) | random }}
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // ===== تأثير ظهور تدريجي =====
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelector('.error-container').style.opacity = '0';
+            document.querySelector('.error-container').style.transform = 'scale(0.95)';
+            
+            setTimeout(function() {
+                document.querySelector('.error-container').style.transition = 'all 0.5s ease';
+                document.querySelector('.error-container').style.opacity = '1';
+                document.querySelector('.error-container').style.transform = 'scale(1)';
+            }, 50);
+        });
+
+        // ===== إعادة تحميل تلقائي بعد 30 ثانية =====
+        setTimeout(function() {
+            // location.reload();
+            // تم التعليق لمنع إعادة التحميل التلقائي المزعج
+            // يمكن إلغاء التعليق إذا أردت التفعيل
+        }, 30000);
+    </script>
+</body>
+</html>
