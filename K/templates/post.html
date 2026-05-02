@@ -16,7 +16,6 @@
             --gray: #64748b;
             --danger: #ef4444;
             --gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --gradient-2: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
             --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
             --shadow-lg: 0 10px 25px rgba(0,0,0,0.2);
@@ -25,21 +24,53 @@
             --radius-md: 15px;
             --radius-lg: 20px;
             --radius-full: 50px;
+            --bg: #f1f5f9;
+            --text: #0f172a;
+            --card-bg: white;
+            --header-bg: var(--gradient-1);
+            --footer-bg: var(--dark);
+            --footer-text: #cbd5e1;
+            --border: #e2e8f0;
+            --input-bg: #f8fafc;
+            --code-bg: #f1f5f9;
+            --blockquote-bg: #f8fafc;
+            --comment-bg: #f8fafc;
+            --modal-bg: white;
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f172a;
+            --text: #e2e8f0;
+            --card-bg: #1e293b;
+            --header-bg: #1e293b;
+            --footer-bg: #020617;
+            --footer-text: #94a3b8;
+            --border: #334155;
+            --input-bg: #1e293b;
+            --code-bg: #1e293b;
+            --blockquote-bg: #1e293b;
+            --comment-bg: #1e293b;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.5);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.6);
+            --shadow-xl: 0 20px 50px rgba(0,0,0,0.7);
+            --modal-bg: #1e293b;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Tajawal', sans-serif;
-            background: #f1f5f9;
-            color: var(--dark);
+            background: var(--bg);
+            color: var(--text);
             line-height: 1.8;
             min-height: 100vh;
+            transition: background 0.3s, color 0.3s;
         }
 
         /* ===== الهيدر ===== */
         .main-header {
-            background: var(--gradient-1);
+            background: var(--header-bg);
             padding: 1rem 2rem;
             position: sticky;
             top: 0;
@@ -84,6 +115,24 @@
 
         .nav-links a:hover { background: rgba(255,255,255,0.2); }
 
+        .theme-toggle {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .theme-toggle:hover { background: rgba(255,255,255,0.4); transform: rotate(15deg); }
+
         .mobile-menu-btn {
             display: none;
             background: none;
@@ -102,7 +151,7 @@
 
         /* ===== المقال ===== */
         .single-post {
-            background: white;
+            background: var(--card-bg);
             border-radius: var(--radius-lg);
             padding: 2.5rem;
             box-shadow: var(--shadow-lg);
@@ -125,7 +174,63 @@
             font-weight: 900;
             line-height: 1.4;
             margin-bottom: 1.2rem;
-            color: var(--dark);
+            color: var(--text);
+        }
+
+        /* ===== بروفايل الكاتب ===== */
+        .author-box {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.2rem;
+            background: var(--bg);
+            border-radius: var(--radius-md);
+            margin-bottom: 1.5rem;
+        }
+
+        .author-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--gradient-1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .author-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .author-info {
+            flex: 1;
+        }
+
+        .author-name {
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .author-name i.fa-check-circle {
+            color: #3b82f6;
+            font-size: 0.8rem;
+        }
+
+        .author-bio {
+            font-size: 0.85rem;
+            color: var(--gray);
+            margin-top: 0.2rem;
         }
 
         .post-meta {
@@ -134,7 +239,7 @@
             align-items: center;
             padding-bottom: 1.5rem;
             margin-bottom: 1.5rem;
-            border-bottom: 2px solid #e2e8f0;
+            border-bottom: 2px solid var(--border);
             flex-wrap: wrap;
             gap: 1rem;
         }
@@ -153,7 +258,7 @@
 
         .btn-like {
             background: none;
-            border: 2px solid #e2e8f0;
+            border: 2px solid var(--border);
             padding: 0.6rem 1.3rem;
             border-radius: var(--radius-full);
             cursor: pointer;
@@ -164,19 +269,16 @@
             gap: 8px;
             transition: all 0.3s;
             color: var(--gray);
+            background: var(--card-bg);
         }
 
         .btn-like:hover { border-color: #fca5a5; color: #ef4444; }
         .btn-like.liked { background: #fef2f2; border-color: #ef4444; color: #ef4444; }
-        .btn-like.liked i { animation: pop 0.3s ease; }
 
-        @keyframes pop {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.4); }
-        }
+        [data-theme="dark"] .btn-like.liked { background: #3b1c1c; }
 
         .btn-share {
-            background: #f1f5f9;
+            background: var(--bg);
             border: none;
             padding: 0.6rem 1.3rem;
             border-radius: var(--radius-full);
@@ -190,7 +292,7 @@
             color: var(--gray);
         }
 
-        .btn-share:hover { background: #e2e8f0; }
+        .btn-share:hover { background: var(--border); }
 
         .post-tags {
             display: flex;
@@ -200,7 +302,7 @@
         }
 
         .tag {
-            background: #e0e7ff;
+            background: var(--code-bg);
             color: var(--primary);
             padding: 0.3rem 1rem;
             border-radius: var(--radius-full);
@@ -223,10 +325,10 @@
         .post-content {
             font-size: 1.1rem;
             line-height: 2;
-            color: #334155;
+            color: var(--text);
         }
 
-        .post-content h1, .post-content h2, .post-content h3 { color: var(--dark); margin: 1.8rem 0 0.8rem; }
+        .post-content h1, .post-content h2, .post-content h3 { color: var(--text); margin: 1.8rem 0 0.8rem; }
         .post-content h2 { font-size: 1.6rem; border-right: 4px solid var(--primary); padding-right: 1rem; }
         .post-content h3 { font-size: 1.3rem; }
         .post-content p { margin-bottom: 1.2rem; }
@@ -235,16 +337,16 @@
         .post-content a { color: var(--primary); text-decoration: underline; }
         .post-content img { max-width: 100%; border-radius: var(--radius-md); margin: 1rem 0; }
         .post-content blockquote {
-            background: #f8fafc;
+            background: var(--blockquote-bg);
             border-right: 5px solid var(--secondary);
             padding: 1.2rem 1.5rem;
             margin: 1.5rem 0;
             border-radius: 0 var(--radius-md) var(--radius-md) 0;
             font-style: italic;
-            color: #475569;
+            color: var(--gray);
         }
         .post-content code {
-            background: #f1f5f9;
+            background: var(--code-bg);
             padding: 0.2rem 0.5rem;
             border-radius: 5px;
             font-size: 0.9em;
@@ -263,12 +365,12 @@
         }
         .post-content pre code { background: none; padding: 0; color: #e2e8f0; }
         .post-content table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
-        .post-content th, .post-content td { border: 1px solid #e2e8f0; padding: 0.8rem; text-align: right; }
-        .post-content th { background: #f8fafc; font-weight: 700; }
+        .post-content th, .post-content td { border: 1px solid var(--border); padding: 0.8rem; text-align: right; }
+        .post-content th { background: var(--bg); font-weight: 700; }
 
         /* ===== مقالات ذات صلة ===== */
         .related-posts {
-            background: white;
+            background: var(--card-bg);
             border-radius: var(--radius-lg);
             padding: 2rem;
             box-shadow: var(--shadow-md);
@@ -281,6 +383,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            color: var(--text);
         }
 
         .related-grid {
@@ -291,29 +394,26 @@
 
         .related-card {
             padding: 1.2rem;
-            background: #f8fafc;
+            background: var(--bg);
             border-radius: var(--radius-md);
             text-decoration: none;
             transition: all 0.3s;
             display: block;
         }
 
-        .related-card:hover { background: #e0e7ff; transform: translateY(-3px); }
+        .related-card:hover { background: var(--border); transform: translateY(-3px); }
 
         .related-card h4 {
-            color: var(--dark);
+            color: var(--text);
             font-size: 1rem;
             margin-bottom: 0.5rem;
         }
 
-        .related-card p {
-            color: var(--gray);
-            font-size: 0.85rem;
-        }
+        .related-card p { color: var(--gray); font-size: 0.85rem; }
 
         /* ===== التعليقات ===== */
         .comments-section {
-            background: white;
+            background: var(--card-bg);
             border-radius: var(--radius-lg);
             padding: 2.5rem;
             box-shadow: var(--shadow-md);
@@ -325,16 +425,17 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            color: var(--text);
         }
 
         .comment-form {
-            background: #f8fafc;
+            background: var(--bg);
             padding: 1.5rem;
             border-radius: var(--radius-md);
             margin-bottom: 2rem;
         }
 
-        .comment-form h4 { margin-bottom: 1rem; }
+        .comment-form h4 { margin-bottom: 1rem; color: var(--text); }
 
         .form-group { margin-bottom: 1rem; }
 
@@ -342,12 +443,14 @@
         .form-group textarea {
             width: 100%;
             padding: 0.8rem 1rem;
-            border: 2px solid #e2e8f0;
+            border: 2px solid var(--border);
             border-radius: var(--radius-md);
             font-family: 'Tajawal', sans-serif;
             font-size: 0.95rem;
             transition: border-color 0.3s;
             resize: vertical;
+            background: var(--card-bg);
+            color: var(--text);
         }
 
         .form-group input:focus,
@@ -380,7 +483,7 @@
         .comments-list { margin-top: 1.5rem; }
 
         .comment {
-            background: #f8fafc;
+            background: var(--comment-bg);
             padding: 1.5rem;
             border-radius: var(--radius-md);
             margin-bottom: 1rem;
@@ -394,10 +497,10 @@
             margin-bottom: 0.5rem;
         }
 
-        .comment-header strong { color: var(--dark); }
+        .comment-header strong { color: var(--text); }
         .comment-header span { color: var(--gray); font-size: 0.85rem; }
 
-        .comment p { color: #475569; line-height: 1.7; }
+        .comment p { color: var(--text); line-height: 1.7; }
 
         .no-comments {
             text-align: center;
@@ -407,8 +510,8 @@
 
         /* ===== الفوتر ===== */
         .main-footer {
-            background: var(--dark);
-            color: #94a3b8;
+            background: var(--footer-bg);
+            color: var(--footer-text);
             text-align: center;
             padding: 2rem;
             margin-top: 3rem;
@@ -470,7 +573,7 @@
         @media (max-width: 768px) {
             .main-header { padding: 0.8rem 1rem; }
             .mobile-menu-btn { display: block; }
-            .nav-links { display: none; position: absolute; top: 100%; right: 0; left: 0; background: var(--gradient-1); flex-direction: column; padding: 1rem; }
+            .nav-links { display: none; position: absolute; top: 100%; right: 0; left: 0; background: var(--header-bg); flex-direction: column; padding: 1rem; }
             .nav-links.show { display: flex; }
             .single-post { padding: 1.5rem; }
             .single-post h1 { font-size: 1.6rem; }
@@ -478,6 +581,7 @@
             .post-content { font-size: 1rem; }
             .related-grid { grid-template-columns: 1fr; }
             .comments-section { padding: 1.5rem; }
+            .author-box { flex-direction: column; text-align: center; }
         }
     </style>
 </head>
@@ -494,13 +598,16 @@
             <ul class="nav-links">
                 <li><a href="{{ url_for('index') }}"><i class="fas fa-home"></i> الرئيسية</a></li>
                 {% if session.user_id %}
-                    {% if session.is_admin %}
-                        <li><a href="{{ url_for('admin') }}"><i class="fas fa-cog"></i> لوحة التحكم</a></li>
-                    {% endif %}
+                    <li><a href="{{ url_for('new_post') }}"><i class="fas fa-plus-circle"></i> مقال جديد</a></li>
+                    <li><a href="{{ url_for('my_posts') }}"><i class="fas fa-list"></i> منشوراتي</a></li>
+                    <li><a href="{{ url_for('profile') }}"><i class="fas fa-id-card"></i> الملف الشخصي</a></li>
                     <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> خروج</a></li>
                 {% else %}
                     <li><a href="{{ url_for('login') }}"><i class="fas fa-sign-in-alt"></i> دخول</a></li>
                 {% endif %}
+                <button class="theme-toggle" onclick="toggleTheme()" aria-label="تبديل الوضع الليلي">
+                    <i class="fas fa-moon" id="themeIcon"></i>
+                </button>
             </ul>
         </nav>
     </header>
@@ -525,7 +632,27 @@
         <article class="single-post">
             <span class="post-category">{{ post.category }}</span>
             <h1>{{ post.title }}</h1>
-            
+
+            <!-- بروفايل الكاتب -->
+            <div class="author-box">
+                <a href="{{ url_for('user_profile', username=post.author_name) }}" class="author-avatar">
+                    {% if post.author_avatar %}
+                    <img src="{{ post.author_avatar }}" alt="{{ post.author_name }}">
+                    {% else %}
+                    {{ post.author_name[0] | upper if post.author_name else 'م' }}
+                    {% endif %}
+                </a>
+                <div class="author-info">
+                    <a href="{{ url_for('user_profile', username=post.author_name) }}" class="author-name">
+                        {{ post.author_name or 'مجهول' }}
+                        {% if post.author_is_admin %}
+                        <i class="fas fa-check-circle" title="حساب موثق"></i>
+                        {% endif %}
+                    </a>
+                    <div class="author-bio">كاتب في نبض الحدث</div>
+                </div>
+            </div>
+
             <div class="post-meta">
                 <div class="post-info">
                     <span><i class="far fa-calendar-alt"></i> {{ post.created_at[:10] }}</span>
@@ -580,13 +707,10 @@
         <!-- ===== التعليقات ===== -->
         <section class="comments-section">
             <h3><i class="fas fa-comments"></i> التعليقات ({{ comments|length }})</h3>
-            
+
+            {% if session.user_id %}
             <form action="{{ url_for('add_comment', post_id=post.id) }}" method="POST" class="comment-form">
                 <h4>أضف تعليقاً</h4>
-                <div class="form-group">
-                    <input type="text" name="author" placeholder="اسمك الكريم" required 
-                           value="{{ session.username or '' }}">
-                </div>
                 <div class="form-group">
                     <textarea name="content" rows="3" placeholder="اكتب تعليقك هنا..." required></textarea>
                 </div>
@@ -594,6 +718,11 @@
                     <i class="fas fa-paper-plane"></i> نشر التعليق
                 </button>
             </form>
+            {% else %}
+            <div class="comment-form" style="text-align: center;">
+                <p>يجب <a href="{{ url_for('login') }}" style="color: var(--primary);">تسجيل الدخول</a> لإضافة تعليق.</p>
+            </div>
+            {% endif %}
 
             <div class="comments-list">
                 {% if comments %}
@@ -622,24 +751,42 @@
     </footer>
 
     <script>
-        // إخفاء التنبيهات تلقائياً
-        setTimeout(function() {
-            document.querySelectorAll('.alert').forEach(function(alert) {
-                alert.style.animation = 'slideOut 0.4s ease forwards';
-                setTimeout(function() { alert.remove(); }, 400);
-            });
-        }, 5000);
+        // ===== الوضع الليلي =====
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
 
-        // إغلاق القائمة
-        document.addEventListener('click', function(e) {
-            const navLinks = document.querySelector('.nav-links');
-            if (!e.target.closest('.nav-container') && navLinks.classList.contains('show')) {
-                navLinks.classList.remove('show');
+        function toggleTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('themeIcon');
+            if (html.getAttribute('data-theme') === 'dark') {
+                html.removeAttribute('data-theme');
+                icon.className = 'fas fa-moon';
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.setAttribute('data-theme', 'dark');
+                icon.className = 'fas fa-sun';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const icon = document.getElementById('themeIcon');
+            if (document.documentElement.getAttribute('data-theme') === 'dark') {
+                icon.className = 'fas fa-sun';
             }
         });
 
-        // الإعجاب
+        // ===== الإعجاب =====
         function toggleLike(postId) {
+            {% if not session.user_id %}
+            alert('يرجى تسجيل الدخول للإعجاب بالمقال');
+            window.location.href = '/login';
+            return;
+            {% endif %}
             fetch('/like/' + postId, { method: 'POST' })
                 .then(response => response.json())
                 .then(data => {
@@ -647,7 +794,6 @@
                         const btn = document.getElementById('likeBtn');
                         const countSpan = document.getElementById('likes-count');
                         const icon = btn.querySelector('i');
-                        
                         if (data.liked) {
                             btn.classList.add('liked');
                             icon.className = 'fas fa-heart';
@@ -656,26 +802,37 @@
                             icon.className = 'far fa-heart';
                         }
                         countSpan.textContent = data.count;
-                        
-                        // تأثير النبض
                         icon.style.transform = 'scale(1.5)';
                         setTimeout(() => { icon.style.transform = 'scale(1)'; }, 200);
                     }
                 });
         }
 
-        // المشاركة
+        // ===== المشاركة =====
         function sharePost() {
             if (navigator.share) {
-                navigator.share({
-                    title: '{{ post.title }}',
-                    url: window.location.href
-                });
+                navigator.share({ title: '{{ post.title }}', url: window.location.href });
             } else {
                 navigator.clipboard.writeText(window.location.href);
                 alert('تم نسخ الرابط!');
             }
         }
+
+        // ===== القائمة =====
+        document.addEventListener('click', function(e) {
+            const navLinks = document.querySelector('.nav-links');
+            if (!e.target.closest('.nav-container') && navLinks.classList.contains('show')) {
+                navLinks.classList.remove('show');
+            }
+        });
+
+        // ===== التنبيهات =====
+        setTimeout(function() {
+            document.querySelectorAll('.alert').forEach(function(alert) {
+                alert.style.animation = 'slideOut 0.4s ease forwards';
+                setTimeout(function() { alert.remove(); }, 400);
+            });
+        }, 5000);
     </script>
 </body>
 </html>
