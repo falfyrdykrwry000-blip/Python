@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الملف الشخصي - نبض الحدث</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #7c3aed;
+            --dark: #0f172a;
+            --light: #f8fafc;
+            --gray: #64748b;
+            --success: #10b981;
+            --gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-2: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.2);
+            --shadow-xl: 0 20px 50px rgba(0,0,0,0.3);
+            --radius-sm: 10px;
+            --radius-md: 15px;
+            --radius-lg: 20px;
+            --radius-full: 50px;
+            --bg: #f1f5f9;
+            --text: #0f172a;
+            --card-bg: white;
+            --header-bg: var(--gradient-1);
+            --footer-bg: var(--dark);
+            --footer-text: #cbd5e1;
+            --border: #e2e8f0;
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f172a;
+            --text: #e2e8f0;
+            --card-bg: #1e293b;
+            --header-bg: #1e293b;
+            --footer-bg: #020617;
+            --footer-text: #94a3b8;
+            --border: #334155;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.5);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.6);
+            --shadow-xl: 0 20px 50px rgba(0,0,0,0.7);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.8;
+            min-height: 100vh;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .main-header {
+            background: var(--header-bg);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .nav-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo i { font-size: 1.8rem; color: #fbbf24; }
+
+        .nav-links { display: flex; gap: 1rem; align-items: center; list-style: none; }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-full);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9rem;
+        }
+
+        .nav-links a:hover { background: rgba(255,255,255,0.2); }
+
+        .theme-toggle {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .theme-toggle:hover { background: rgba(255,255,255,0.4); transform: rotate(15deg); }
+
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        /* ===== بطاقة البروفايل ===== */
+        .profile-card {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .profile-cover {
+            height: 150px;
+            background: var(--gradient-2);
+            position: relative;
+        }
+
+        .profile-avatar-wrapper {
+            position: absolute;
+            bottom: -50px;
+            right: 2rem;
+        }
+
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: var(--gradient-1);
+            border: 5px solid var(--card-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            color: white;
+            font-weight: bold;
+            overflow: hidden;
+        }
+
+        .profile-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .verified-badge {
+            position: absolute;
+            bottom: 5px;
+            left: 5px;
+            background: #3b82f6;
+            color: white;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            border: 3px solid var(--card-bg);
+        }
+
+        .profile-body {
+            padding: 3.5rem 2rem 2rem 2rem;
+        }
+
+        .profile-name {
+            font-size: 1.6rem;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 0.3rem;
+        }
+
+        .profile-username {
+            color: var(--gray);
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .profile-bio {
+            color: var(--text);
+            margin-bottom: 1.5rem;
+            line-height: 1.7;
+        }
+
+        .profile-meta {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+
+        .profile-meta span {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .profile-meta a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        /* ===== الإحصائيات ===== */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding: 1rem 0;
+            border-top: 2px solid var(--border);
+            border-bottom: 2px solid var(--border);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--gray);
+        }
+
+        .btn {
+            padding: 0.7rem 2rem;
+            border: none;
+            border-radius: var(--radius-full);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Tajawal', sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            background: var(--gradient-1);
+            color: white;
+        }
+
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+
+        .btn-outline {
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            color: var(--text);
+        }
+
+        .btn-outline:hover { background: var(--bg); }
+
+        .profile-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .main-footer {
+            background: var(--footer-bg);
+            color: var(--footer-text);
+            text-align: center;
+            padding: 2rem;
+            margin-top: 3rem;
+        }
+
+        .alerts-container {
+            position: fixed;
+            top: 90px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius-md);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            animation: slideIn 0.4s ease;
+            box-shadow: var(--shadow-lg);
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .alert-success { background: #dcfce7; color: #166534; border-right: 4px solid #22c55e; }
+        .close-alert {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            cursor: pointer;
+            margin-right: auto;
+            opacity: 0.7;
+            color: inherit;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-menu-btn { display: block; }
+            .nav-links { display: none; position: absolute; top: 100%; right: 0; left: 0; background: var(--header-bg); flex-direction: column; padding: 1rem; }
+            .nav-links.show { display: flex; }
+            .profile-avatar-wrapper { right: 50%; transform: translateX(50%); }
+            .profile-body { text-align: center; padding-top: 4rem; }
+            .profile-name { justify-content: center; }
+            .profile-meta { justify-content: center; }
+            .profile-actions { justify-content: center; }
+            .stats-row { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        @media (max-width: 480px) {
+            .stats-row { grid-template-columns: 1fr; gap: 0.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <header class="main-header">
+        <nav class="nav-container">
+            <a href="{{ url_for('index') }}" class="logo">
+                <i class="fas fa-globe-americas"></i> نبض الحدث
+            </a>
+            <button class="mobile-menu-btn" onclick="document.querySelector('.nav-links').classList.toggle('show')" aria-label="القائمة">
+                <i class="fas fa-bars"></i>
+            </button>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('index') }}"><i class="fas fa-home"></i> الرئيسية</a></li>
+                <li><a href="{{ url_for('new_post') }}"><i class="fas fa-plus-circle"></i> مقال جديد</a></li>
+                <li><a href="{{ url_for('my_posts') }}"><i class="fas fa-list"></i> منشوراتي</a></li>
+                <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> خروج</a></li>
+                <button class="theme-toggle" onclick="toggleTheme()" aria-label="تبديل الوضع الليلي">
+                    <i class="fas fa-moon" id="themeIcon"></i>
+                </button>
+            </ul>
+        </nav>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="alerts-container">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        <i class="fas fa-check-circle"></i>
+                        <span>{{ message }}</span>
+                        <button class="close-alert" onclick="this.parentElement.remove()">&times;</button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="container">
+        <div class="profile-card">
+            <div class="profile-cover"></div>
+            <div class="profile-avatar-wrapper">
+                <div class="profile-avatar">
+                    {% if user.avatar_url %}
+                    <img src="{{ user.avatar_url }}" alt="{{ user.username }}">
+                    {% else %}
+                    {{ user.username[0] | upper }}
+                    {% endif %}
+                </div>
+                {% if user.is_admin %}
+                <div class="verified-badge">
+                    <i class="fas fa-check"></i>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="profile-body">
+                <div class="profile-name">
+                    {{ user.username }}
+                    {% if user.is_admin %}
+                    <i class="fas fa-check-circle" style="color: #3b82f6; font-size: 1rem;" title="حساب موثق"></i>
+                    {% endif %}
+                </div>
+                <div class="profile-username">@{{ user.username }}</div>
+
+                <div class="profile-bio">
+                    {{ user.bio or 'لم يتم إضافة نبذة تعريفية بعد.' }}
+                </div>
+
+                <div class="profile-meta">
+                    {% if user.email %}
+                    <span><i class="fas fa-envelope"></i> {{ user.email }}</span>
+                    {% endif %}
+                    {% if user.website %}
+                    <span><i class="fas fa-globe"></i> <a href="{{ user.website }}" target="_blank">{{ user.website }}</a></span>
+                    {% endif %}
+                    <span><i class="far fa-calendar-alt"></i> انضم {{ user.created_at[:10] }}</span>
+                </div>
+
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <div class="stat-number">{{ posts_count }}</div>
+                        <div class="stat-label">مقالات</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">{{ comments_count }}</div>
+                        <div class="stat-label">تعليقات</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">
+                            {% if user.oauth_provider == 'google' %}
+                            <i class="fab fa-google"></i>
+                            {% elif user.oauth_provider == 'github' %}
+                            <i class="fab fa-github"></i>
+                            {% else %}
+                            <i class="fas fa-envelope"></i>
+                            {% endif %}
+                        </div>
+                        <div class="stat-label">تسجيل الدخول</div>
+                    </div>
+                </div>
+
+                <div class="profile-actions">
+                    <a href="{{ url_for('edit_profile') }}" class="btn btn-primary">
+                        <i class="fas fa-edit"></i> تعديل الملف الشخصي
+                    </a>
+                    <a href="{{ url_for('my_posts') }}" class="btn btn-outline">
+                        <i class="fas fa-list"></i> منشوراتي
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="main-footer">
+        <p>© 2024 <i class="fas fa-heart" style="color: #ef4444;"></i> نبض الحدث</p>
+    </footer>
+
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        })();
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('themeIcon');
+            if (html.getAttribute('data-theme') === 'dark') {
+                html.removeAttribute('data-theme');
+                icon.className = 'fas fa-moon';
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.setAttribute('data-theme', 'dark');
+                icon.className = 'fas fa-sun';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const icon = document.getElementById('themeIcon');
+            if (document.documentElement.getAttribute('data-theme') === 'dark') {
+                icon.className = 'fas fa-sun';
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            const navLinks = document.querySelector('.nav-links');
+            if (!e.target.closest('.nav-container') && navLinks.classList.contains('show')) {
+                navLinks.classList.remove('show');
+            }
+        });
+
+        setTimeout(function() {
+            document.querySelectorAll('.alert').forEach(function(alert) {
+                alert.style.animation = 'slideOut 0.4s ease forwards';
+                setTimeout(function() { alert.remove(); }, 400);
+            });
+        }, 5000);
+    </script>
+</body>
+</html>
