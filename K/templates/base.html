@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}نبض الحدث{% endblock %}</title>
+    <!-- الخطوط العربية -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <!-- Font Awesome للأيقونات -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- ملف التنسيقات -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- ===== الهيدر ===== -->
+    <header class="main-header">
+        <nav class="nav-container">
+            <a href="{{ url_for('index') }}" class="logo">
+                <i class="fas fa-globe-americas"></i> نبض الحدث
+            </a>
+            
+            <button class="mobile-menu-btn" aria-label="القائمة">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+            <ul class="nav-links">
+                <li><a href="{{ url_for('index') }}"><i class="fas fa-home"></i> الرئيسية</a></li>
+                
+                {% if session.user_id %}
+                    {% if session.is_admin %}
+                        <li><a href="{{ url_for('admin') }}"><i class="fas fa-cog"></i> لوحة التحكم</a></li>
+                        <li><a href="{{ url_for('new_post') }}"><i class="fas fa-plus-circle"></i> مقال جديد</a></li>
+                    {% endif %}
+                    <li class="user-menu">
+                        <a href="#" class="user-menu-btn">
+                            <i class="fas fa-user"></i> {{ session.username }}
+                            <i class="fas fa-chevron-down"></i>
+                        </a>
+                        <ul class="dropdown">
+                            <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a></li>
+                        </ul>
+                    </li>
+                {% else %}
+                    <li><a href="{{ url_for('login') }}"><i class="fas fa-sign-in-alt"></i> دخول</a></li>
+                    <li><a href="{{ url_for('register') }}" class="btn-register"><i class="fas fa-user-plus"></i> تسجيل</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </header>
+
+    <!-- ===== رسائل التنبيه ===== -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="alerts-container">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' if category == 'danger' else 'info-circle' }}"></i>
+                        <span>{{ message }}</span>
+                        <button class="close-alert" onclick="this.parentElement.remove()">&times;</button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- ===== المحتوى الرئيسي ===== -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- ===== الفوتر ===== -->
+    <footer class="main-footer">
+        <div class="footer-container">
+            <div class="footer-section">
+                <h3><i class="fas fa-globe-americas"></i> نبض الحدث</h3>
+                <p>مدونة عصرية تقدم أحدث الأخبار والمقالات في مختلف المجالات التقنية والثقافية والاجتماعية.</p>
+                <div class="social-links">
+                    <a href="#" aria-label="تويتر"><i class="fab fa-twitter"></i></a>
+                    <a href="#" aria-label="فيسبوك"><i class="fab fa-facebook"></i></a>
+                    <a href="#" aria-label="انستغرام"><i class="fab fa-instagram"></i></a>
+                    <a href="#" aria-label="يوتيوب"><i class="fab fa-youtube"></i></a>
+                </div>
+            </div>
+            
+            <div class="footer-section">
+                <h4>روابط سريعة</h4>
+                <ul>
+                    <li><a href="{{ url_for('index') }}">الرئيسية</a></li>
+                    <li><a href="#">من نحن</a></li>
+                    <li><a href="#">سياسة الخصوصية</a></li>
+                    <li><a href="#">اتصل بنا</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-section">
+                <h4>تصنيفات</h4>
+                <ul>
+                    <li><a href="{{ url_for('category_posts', category='تقنية') }}">تقنية</a></li>
+                    <li><a href="{{ url_for('category_posts', category='سياسة') }}">سياسة</a></li>
+                    <li><a href="{{ url_for('category_posts', category='رياضة') }}">رياضة</a></li>
+                    <li><a href="{{ url_for('category_posts', category='ثقافة') }}">ثقافة</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-section">
+                <h4>النشرة البريدية</h4>
+                <p>اشترك ليصلك كل جديد</p>
+                <form class="newsletter-form">
+                    <input type="email" placeholder="بريدك الإلكتروني" required>
+                    <button type="submit"><i class="fas fa-paper-plane"></i></button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="footer-bottom">
+            <p>© 2024 <i class="fas fa-heart" style="color: #ef4444;"></i> نبض الحدث - جميع الحقوق محفوظة</p>
+        </div>
+    </footer>
+
+    <!-- ===== السكريبتات ===== -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+                          </html>
