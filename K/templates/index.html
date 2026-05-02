@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>الرئيسية - نبض الحدث</title>
-    <!-- الخطوط العربية -->
+    <title>{% block title %}نبض الحدث{% endblock %}</title>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         :root {
@@ -31,21 +29,51 @@
             --radius-md: 15px;
             --radius-lg: 20px;
             --radius-full: 50px;
+            --bg: #f1f5f9;
+            --text: #0f172a;
+            --card-bg: white;
+            --header-bg: var(--gradient-1);
+            --footer-bg: var(--dark);
+            --footer-text: #cbd5e1;
+            --border: #e2e8f0;
+            --input-bg: #f8fafc;
+            --tag-bg: #e0e7ff;
+            --tag-text: var(--primary);
+            --modal-bg: white;
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f172a;
+            --text: #e2e8f0;
+            --card-bg: #1e293b;
+            --header-bg: #1e293b;
+            --footer-bg: #020617;
+            --footer-text: #94a3b8;
+            --border: #334155;
+            --input-bg: #1e293b;
+            --tag-bg: #1e3a5f;
+            --tag-text: #60a5fa;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.5);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.6);
+            --shadow-xl: 0 20px 50px rgba(0,0,0,0.7);
+            --modal-bg: #1e293b;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Tajawal', sans-serif;
-            background: #f1f5f9;
-            color: var(--dark);
+            background: var(--bg);
+            color: var(--text);
             line-height: 1.8;
             min-height: 100vh;
+            transition: background 0.3s, color 0.3s;
         }
 
         /* ===== الهيدر ===== */
         .main-header {
-            background: var(--gradient-1);
+            background: var(--header-bg);
             padding: 1rem 2rem;
             position: sticky;
             top: 0;
@@ -76,7 +104,7 @@
 
         .nav-links {
             display: flex;
-            gap: 1.5rem;
+            gap: 1.2rem;
             align-items: center;
             list-style: none;
         }
@@ -122,6 +150,27 @@
             color: var(--dark) !important;
         }
 
+        .theme-toggle {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255,255,255,0.4);
+            transform: rotate(15deg);
+        }
+
         .user-menu {
             position: relative;
         }
@@ -136,6 +185,7 @@
             gap: 6px;
             color: white;
             font-weight: 500;
+            text-decoration: none;
         }
 
         .dropdown {
@@ -143,19 +193,20 @@
             position: absolute;
             top: 100%;
             left: 0;
-            background: white;
+            background: var(--modal-bg);
             border-radius: var(--radius-md);
             box-shadow: var(--shadow-xl);
             min-width: 200px;
             margin-top: 10px;
             overflow: hidden;
             list-style: none;
+            z-index: 100;
         }
 
         .user-menu:hover .dropdown { display: block; }
 
         .dropdown li a {
-            color: var(--dark) !important;
+            color: var(--text) !important;
             padding: 0.8rem 1.2rem;
             display: flex;
             align-items: center;
@@ -164,7 +215,7 @@
         }
 
         .dropdown li a:hover {
-            background: #f1f5f9;
+            background: var(--bg);
             color: var(--primary) !important;
         }
 
@@ -180,7 +231,7 @@
         /* ===== الهيرو ===== */
         .hero {
             background: var(--gradient-2);
-            padding: 5rem 2rem;
+            padding: 4rem 2rem;
             text-align: center;
             color: white;
             position: relative;
@@ -250,9 +301,7 @@
             transition: background 0.3s;
         }
 
-        .search-form button:hover {
-            background: var(--primary-dark);
-        }
+        .search-form button:hover { background: var(--primary-dark); }
 
         /* ===== الحاوية ===== */
         .container {
@@ -268,14 +317,14 @@
             flex-wrap: wrap;
             margin-bottom: 2.5rem;
             padding: 1rem 1.5rem;
-            background: white;
+            background: var(--card-bg);
             border-radius: var(--radius-lg);
             box-shadow: var(--shadow-sm);
         }
 
         .category-tag {
             padding: 0.5rem 1.3rem;
-            background: #f1f5f9;
+            background: var(--bg);
             color: var(--gray);
             text-decoration: none;
             border-radius: var(--radius-full);
@@ -285,8 +334,8 @@
         }
 
         .category-tag:hover {
-            background: #e2e8f0;
-            color: var(--dark);
+            background: var(--border);
+            color: var(--text);
             transform: translateY(-2px);
         }
 
@@ -304,7 +353,7 @@
         }
 
         .post-card {
-            background: white;
+            background: var(--card-bg);
             border-radius: var(--radius-lg);
             overflow: hidden;
             box-shadow: var(--shadow-md);
@@ -368,20 +417,32 @@
         }
 
         .post-title a {
-            color: var(--dark);
+            color: var(--text);
             text-decoration: none;
             transition: color 0.3s;
         }
 
-        .post-title a:hover {
-            color: var(--primary);
-        }
+        .post-title a:hover { color: var(--primary); }
 
         .post-summary {
             color: var(--gray);
             font-size: 0.95rem;
-            margin-bottom: 1.2rem;
+            margin-bottom: 1rem;
             line-height: 1.7;
+        }
+
+        .post-author {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            color: var(--gray);
+            margin-bottom: 0.8rem;
+        }
+
+        .post-author i.fa-check-circle {
+            color: #3b82f6;
+            font-size: 0.75rem;
         }
 
         .post-meta {
@@ -392,7 +453,7 @@
             font-size: 0.85rem;
             margin-bottom: 1.2rem;
             padding-bottom: 1.2rem;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid var(--border);
         }
 
         .post-stats {
@@ -417,9 +478,7 @@
             transition: gap 0.3s;
         }
 
-        .read-more:hover {
-            gap: 12px;
-        }
+        .read-more:hover { gap: 12px; }
 
         /* ===== حالة فارغة ===== */
         .empty-state {
@@ -436,7 +495,7 @@
 
         .empty-state h3 {
             font-size: 1.5rem;
-            color: var(--dark);
+            color: var(--text);
             margin-bottom: 0.5rem;
         }
 
@@ -484,25 +543,21 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: white;
+            background: var(--card-bg);
             border-radius: var(--radius-sm);
-            color: var(--dark);
+            color: var(--text);
             text-decoration: none;
             font-weight: 600;
             box-shadow: var(--shadow-sm);
             transition: all 0.3s;
         }
 
-        .page-btn:hover {
-            background: #e2e8f0;
-        }
-
+        .page-btn:hover { background: var(--border); }
         .page-btn.active {
             background: var(--gradient-1);
             color: white;
             box-shadow: var(--shadow-md);
         }
-
         .page-btn.disabled {
             opacity: 0.5;
             cursor: not-allowed;
@@ -511,8 +566,8 @@
 
         /* ===== الفوتر ===== */
         .main-footer {
-            background: var(--dark);
-            color: #cbd5e1;
+            background: var(--footer-bg);
+            color: var(--footer-text);
             padding: 3rem 2rem 1rem;
             margin-top: 4rem;
         }
@@ -548,6 +603,9 @@
 
         .footer-section ul li {
             margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .footer-section ul li a {
@@ -556,9 +614,8 @@
             transition: color 0.3s;
         }
 
-        .footer-section ul li a:hover {
-            color: white;
-        }
+        .footer-section ul li a:hover { color: white; }
+        .footer-section ul li i { color: var(--primary); width: 20px; }
 
         .social-links {
             display: flex;
@@ -602,9 +659,7 @@
             color: white;
         }
 
-        .newsletter-form input::placeholder {
-            color: #94a3b8;
-        }
+        .newsletter-form input::placeholder { color: #94a3b8; }
 
         .newsletter-form button {
             padding: 0.7rem 1.3rem;
@@ -615,9 +670,7 @@
             transition: background 0.3s;
         }
 
-        .newsletter-form button:hover {
-            background: var(--primary-dark);
-        }
+        .newsletter-form button:hover { background: var(--primary-dark); }
 
         .footer-bottom {
             text-align: center;
@@ -659,7 +712,6 @@
             gap: 0.8rem;
             animation: slideIn 0.4s ease;
             box-shadow: var(--shadow-lg);
-            position: relative;
         }
 
         @keyframes slideIn {
@@ -679,107 +731,51 @@
             cursor: pointer;
             margin-right: auto;
             opacity: 0.7;
-            transition: opacity 0.3s;
             color: inherit;
         }
 
-        .close-alert:hover { opacity: 1; }
-
         /* ===== تجاوب ===== */
+        @media (max-width: 968px) {
+            .posts-grid {
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            }
+        }
+
         @media (max-width: 768px) {
-            .main-header {
-                padding: 0.8rem 1rem;
-            }
-            
-            .logo {
-                font-size: 1.3rem;
-            }
-            
-            .logo i {
-                font-size: 1.5rem;
-            }
-            
-            .mobile-menu-btn {
-                display: block;
-            }
-            
+            .main-header { padding: 0.8rem 1rem; }
+            .logo { font-size: 1.3rem; }
+            .logo i { font-size: 1.5rem; }
+            .mobile-menu-btn { display: block; }
             .nav-links {
                 display: none;
                 position: absolute;
                 top: 100%;
                 right: 0;
                 left: 0;
-                background: var(--gradient-1);
+                background: var(--header-bg);
                 flex-direction: column;
                 padding: 1rem;
                 gap: 0.5rem;
                 box-shadow: var(--shadow-lg);
             }
-            
-            .nav-links.show {
-                display: flex;
-            }
-            
-            .hero {
-                padding: 3rem 1.5rem;
-            }
-            
-            .hero h1 {
-                font-size: 2rem;
-            }
-            
-            .hero p {
-                font-size: 1rem;
-            }
-            
-            .posts-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .post-image {
-                height: 180px;
-            }
-            
-            .footer-container {
-                grid-template-columns: 1fr;
-                gap: 1.5rem;
-            }
-            
-            .alerts-container {
-                right: 10px;
-                left: 10px;
-                max-width: none;
-            }
+            .nav-links.show { display: flex; }
+            .hero { padding: 3rem 1.5rem; }
+            .hero h1 { font-size: 2rem; }
+            .hero p { font-size: 1rem; }
+            .posts-grid { grid-template-columns: 1fr; }
+            .post-image { height: 180px; }
+            .footer-container { grid-template-columns: 1fr; gap: 1.5rem; }
+            .alerts-container { right: 10px; left: 10px; max-width: none; }
         }
 
         @media (max-width: 480px) {
-            .categories-bar {
-                gap: 0.5rem;
-                padding: 0.8rem;
-            }
-            
-            .category-tag {
-                padding: 0.4rem 0.8rem;
-                font-size: 0.8rem;
-            }
-            
-            .post-meta {
-                flex-direction: column;
-                gap: 0.5rem;
-                align-items: flex-start;
-            }
-            
-            .post-stats {
-                gap: 0.8rem;
-            }
-            
-            .search-form input {
-                padding: 0.8rem 1rem;
-            }
-            
-            .search-form button {
-                padding: 0.8rem 1.2rem;
-            }
+            .categories-bar { gap: 0.5rem; padding: 0.8rem; }
+            .category-tag { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
+            .post-meta { flex-direction: column; gap: 0.5rem; align-items: flex-start; }
+            .post-stats { gap: 0.8rem; }
+            .search-form input { padding: 0.8rem 1rem; }
+            .search-form button { padding: 0.8rem 1.2rem; }
+            .container { padding: 0 0.8rem; }
         }
     </style>
 </head>
@@ -790,25 +786,30 @@
             <a href="{{ url_for('index') }}" class="logo">
                 <i class="fas fa-globe-americas"></i> نبض الحدث
             </a>
-            
+
             <button class="mobile-menu-btn" onclick="document.querySelector('.nav-links').classList.toggle('show')" aria-label="القائمة">
                 <i class="fas fa-bars"></i>
             </button>
-            
+
             <ul class="nav-links">
                 <li><a href="{{ url_for('index') }}"><i class="fas fa-home"></i> الرئيسية</a></li>
-                
+
                 {% if session.user_id %}
+                    <li><a href="{{ url_for('new_post') }}"><i class="fas fa-plus-circle"></i> مقال جديد</a></li>
+                    <li><a href="{{ url_for('my_posts') }}"><i class="fas fa-list"></i> منشوراتي</a></li>
                     {% if session.is_admin %}
                         <li><a href="{{ url_for('admin') }}"><i class="fas fa-cog"></i> لوحة التحكم</a></li>
-                        <li><a href="{{ url_for('new_post') }}"><i class="fas fa-plus-circle"></i> مقال جديد</a></li>
                     {% endif %}
                     <li class="user-menu">
                         <a href="#" class="user-menu-btn">
                             <i class="fas fa-user"></i> {{ session.username }}
+                            {% if session.is_admin %}
+                            <i class="fas fa-check-circle" style="color: #3b82f6; font-size: 0.7rem;"></i>
+                            {% endif %}
                             <i class="fas fa-chevron-down"></i>
                         </a>
                         <ul class="dropdown">
+                            <li><a href="{{ url_for('profile') }}"><i class="fas fa-id-card"></i> الملف الشخصي</a></li>
                             <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a></li>
                         </ul>
                     </li>
@@ -816,6 +817,10 @@
                     <li><a href="{{ url_for('login') }}" class="btn-login"><i class="fas fa-sign-in-alt"></i> دخول</a></li>
                     <li><a href="{{ url_for('register') }}" class="btn-register"><i class="fas fa-user-plus"></i> تسجيل</a></li>
                 {% endif %}
+
+                <button class="theme-toggle" onclick="toggleTheme()" aria-label="تبديل الوضع الليلي">
+                    <i class="fas fa-moon" id="themeIcon"></i>
+                </button>
             </ul>
         </nav>
     </header>
@@ -840,7 +845,6 @@
         <div class="hero-content">
             <h1>مرحباً بكم في نبض الحدث</h1>
             <p>أحدث الأخبار والمقالات التقنية والثقافية والاجتماعية</p>
-            
             <form action="{{ url_for('search') }}" class="search-form">
                 <input type="text" name="q" placeholder="ابحث عن مقال..." value="{{ search_query or '' }}">
                 <button type="submit"><i class="fas fa-search"></i></button>
@@ -856,7 +860,7 @@
                 الكل
             </a>
             {% for cat in categories %}
-            <a href="{{ url_for('category_posts', category=cat.category) }}" 
+            <a href="{{ url_for('category_posts', category=cat.category) }}"
                class="category-tag {% if current_category == cat.category %}active{% endif %}">
                 {{ cat.category }}
             </a>
@@ -878,16 +882,27 @@
                         <i class="fas fa-newspaper"></i>
                     </div>
                     {% endif %}
-                    
+
                     <div class="post-body">
                         <span class="post-category">{{ post.category }}</span>
-                        
+
                         <h2 class="post-title">
                             <a href="{{ url_for('view_post', post_id=post.id) }}">{{ post.title }}</a>
                         </h2>
-                        
+
                         <p class="post-summary">{{ post.summary or post.content[:150] }}...</p>
-                        
+
+                        <!-- اسم الكاتب مع علامة التوثيق -->
+                        <div class="post-author">
+                            <i class="fas fa-user"></i>
+                            <a href="{{ url_for('user_profile', username=post.author_name) }}" style="color: inherit; text-decoration: none;">
+                                {{ post.author_name or 'مجهول' }}
+                            </a>
+                            {% if post.author_is_admin %}
+                            <i class="fas fa-check-circle" title="حساب موثق"></i>
+                            {% endif %}
+                        </div>
+
                         <div class="post-meta">
                             <span class="post-date">
                                 <i class="far fa-calendar-alt"></i> {{ post.created_at[:10] }}
@@ -900,7 +915,7 @@
                                 <span><i class="far fa-heart"></i> {{ post.like_count or 0 }}</span>
                             </div>
                         </div>
-                        
+
                         <a href="{{ url_for('view_post', post_id=post.id) }}" class="read-more">
                             اقرأ المزيد <i class="fas fa-arrow-left"></i>
                         </a>
@@ -916,11 +931,14 @@
                     <a href="{{ url_for('index') }}" class="btn btn-primary">عرض جميع المقالات</a>
                     {% else %}
                     <p>سيتم نشر المقالات قريباً. تابعونا!</p>
+                    {% if session.user_id %}
+                    <a href="{{ url_for('new_post') }}" class="btn btn-primary">أنشر أول مقال</a>
+                    {% endif %}
                     {% endif %}
                 </div>
             {% endif %}
         </div>
-        
+
         <!-- ===== الترقيم ===== -->
         {% if posts and posts|length >= 9 %}
         <div class="pagination">
@@ -946,27 +964,24 @@
                     <a href="#" aria-label="يوتيوب"><i class="fab fa-youtube"></i></a>
                 </div>
             </div>
-            
+
             <div class="footer-section">
                 <h4>روابط سريعة</h4>
                 <ul>
                     <li><a href="{{ url_for('index') }}">الرئيسية</a></li>
                     <li><a href="#">من نحن</a></li>
                     <li><a href="#">سياسة الخصوصية</a></li>
-                    <li><a href="#">اتصل بنا</a></li>
                 </ul>
             </div>
-            
+
             <div class="footer-section">
-                <h4>تصنيفات</h4>
+                <h4>تواصل معنا</h4>
                 <ul>
-                    <li><a href="{{ url_for('category_posts', category='تقنية') }}">تقنية</a></li>
-                    <li><a href="{{ url_for('category_posts', category='سياسة') }}">سياسة</a></li>
-                    <li><a href="{{ url_for('category_posts', category='رياضة') }}">رياضة</a></li>
-                    <li><a href="{{ url_for('category_posts', category='ثقافة') }}">ثقافة</a></li>
+                    <li><i class="fas fa-phone"></i> 9647887276016+</li>
+                    <li><i class="fas fa-envelope"></i> krory@vk.com</li>
                 </ul>
             </div>
-            
+
             <div class="footer-section">
                 <h4>النشرة البريدية</h4>
                 <p>اشترك ليصلك كل جديد</p>
@@ -976,26 +991,53 @@
                 </form>
             </div>
         </div>
-        
+
         <div class="footer-bottom">
             <p>© 2024 <i class="fas fa-heart" style="color: #ef4444;"></i> نبض الحدث - جميع الحقوق محفوظة</p>
         </div>
     </footer>
 
     <script>
-        // إغلاق القائمة عند النقر خارجها
+        // ===== الوضع الليلي =====
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('themeIcon');
+            if (html.getAttribute('data-theme') === 'dark') {
+                html.removeAttribute('data-theme');
+                icon.className = 'fas fa-moon';
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.setAttribute('data-theme', 'dark');
+                icon.className = 'fas fa-sun';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const icon = document.getElementById('themeIcon');
+            if (document.documentElement.getAttribute('data-theme') === 'dark') {
+                icon.className = 'fas fa-sun';
+            }
+        });
+
+        // ===== القائمة =====
         document.addEventListener('click', function(e) {
             const navLinks = document.querySelector('.nav-links');
-            const menuBtn = document.querySelector('.mobile-menu-btn');
             if (!e.target.closest('.nav-container') && navLinks.classList.contains('show')) {
                 navLinks.classList.remove('show');
             }
         });
 
-        // إخفاء التنبيهات تلقائياً بعد 5 ثواني
+        // ===== التنبيهات =====
         setTimeout(function() {
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(function(alert) {
+            document.querySelectorAll('.alert').forEach(function(alert) {
                 alert.style.animation = 'slideOut 0.4s ease forwards';
                 setTimeout(function() { alert.remove(); }, 400);
             });
