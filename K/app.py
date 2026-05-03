@@ -43,23 +43,27 @@ GITHUB_USERINFO_URL = 'https://api.github.com/user'
 GITHUB_SCOPE = ['user:email']
 
 # ========== دوال GitHub API ==========
-def github_get(path):
-    """قراءة ملف من GitHub"""
+def github_get_file(path):
+    """قراءة ملف واحد من GitHub"""
     try:
         url = f'{GITHUB_API}/{path}'
         r = requests.get(url, headers=HEADERS)
         if r.status_code == 200:
-            content = base64.b64decode(r.json()['content']).decode('utf-8')
-            return json.loads(content), r.json()['sha']
+            data = r.json()
+            content = base64.b64decode(data['content']).decode('utf-8')
+            return json.loads(content), data['sha']
         return None, None
-    except:
+    except Exception as e:
+        print(f'github_get_file error: {e}')
         return None, None
 
 def github_save(path, data, sha=None, message='تحديث'):
     """حفظ ملف في GitHub"""
     try:
         url = f'{GITHUB_API}/{path}'
-        content = base64.b64encode(json.dumps(data, ensure_ascii=False, indent=2).encode('utf-8')).decode('utf-8')
+        content = base64.b64encode(
+            json.dumps(data, ensure_ascii=False, indent=2).encode('utf-8')
+        ).decode('utf-8')
         body = {
             'message': message,
             'content': content,
@@ -69,7 +73,8 @@ def github_save(path, data, sha=None, message='تحديث'):
             body['sha'] = sha
         r = requests.put(url, headers=HEADERS, json=body)
         return r.status_code in [200, 201]
-    except:
+    except Exception as e:
+        print(f'github_save error: {e}')
         return False
 
 def github_delete(path, sha, message='حذف'):
@@ -84,48 +89,55 @@ def github_delete(path, sha, message='حذف'):
 
 # ========== دوال البيانات ==========
 def get_users():
-    data, _ = github_get('users.json')
+    data, _ = github_get_file('users.json')
     return data if data else {}
 
 def save_users(users):
-    _, sha = github_get('users.json')
+    _, sha = github_get_file('users.json')
     github_save('users.json', users, sha, 'تحديث المستخدمين')
 
 def get_posts():
-    """جلب جميع المقالات"""
+    """جلب جميع المقالات من مجلد posts"""
     try:
-        url = f'{GITHUB_API}/posts'
+        url = f'https://api.github.com/repos/{GITHUB_REPO}/contents/posts'
         r = requests.get(url, headers=HEADERS)
         posts = []
         if r.status_code == 200:
             for item in r.json():
                 if item['name'].endswith('.json'):
-                    content = base64.b64decode(item['content'] if 'content' in item else '').decode('utf-8')
-                    try:
-                        post = json.loads(content)
-                        post['_file'] = item['name']
-                        posts.append(post)
-                    except:
-                        pass
-        # ترتيب حسب التاريخ
+                    file_url = item['url']
+                    file_r = requests.get(file_url, headers=HEADERS)
+                    if file_r.status_code == 200:
+                        content = base64.b64decode(file_r.json()['content']).decode('utf-8')
+                        try:
+                            post = json.loads(content)
+                            post['_file'] = item['name']
+                            posts.append(post)
+                        except:
+                            pass
         posts.sort(key=lambda x: x.get('created_at', ''), reverse=True)
         return posts
-    except:
+    except Exception as e:
+        print(f'get_posts error: {e}')
         return []
 
 def get_post(post_id):
-    """جلب مقال واحد"""
-    data, _ = github_get(f'posts/{post_id}.json')
-    return data
+    """جلب مقال واحد من posts/post_id.json"""
+    try:
+        data, _ = github_get_file(f'posts/{post_id}.json')
+        return data
+    except Exception as e:
+        print(f'get_post error: {e}')
+        return None
 
 def save_post(post_id, data, message='تحديث مقال'):
-    """حفظ مقال"""
-    _, sha = github_get(f'posts/{post_id}.json')
+    """حفظ مقال في posts/post_id.json"""
+    _, sha = github_get_file(f'posts/{post_id}.json')
     return github_save(f'posts/{post_id}.json', data, sha, message)
 
 def delete_post_file(post_id):
     """حذف مقال"""
-    _, sha = github_get(f'posts/{post_id}.json')
+    _, sha = github_get_file(f'posts/{post_id}.json')
     if sha:
         return github_delete(f'posts/{post_id}.json', sha, 'حذف مقال')
     return False
@@ -139,22 +151,22 @@ def get_next_post_id():
 
 def get_comments(post_id):
     """جلب تعليقات مقال"""
-    data, _ = github_get(f'comments/{post_id}.json')
+    data, _ = github_get_file(f'comments/{post_id}.json')
     return data if data else []
 
 def save_comments(post_id, comments):
     """حفظ تعليقات مقال"""
-    _, sha = github_get(f'comments/{post_id}.json')
+    _, sha = github_get_file(f'comments/{post_id}.json')
     return github_save(f'comments/{post_id}.json', comments, sha, 'تحديث تعليقات')
 
 def get_likes(post_id):
     """جلب إعجابات مقال"""
-    data, _ = github_get(f'likes/{post_id}.json')
+    data, _ = github_get_file(f'likes/{post_id}.json')
     return data if data else []
 
 def save_likes(post_id, likes):
     """حفظ إعجابات مقال"""
-    _, sha = github_get(f'likes/{post_id}.json')
+    _, sha = github_get_file(f'likes/{post_id}.json')
     return github_save(f'likes/{post_id}.json', likes, sha, 'تحديث إعجابات')
 
 # ========== الديكوريتور ==========
@@ -181,7 +193,6 @@ def admin_required(f):
 
 def login_or_register_user(provider, provider_id, name, email):
     users = get_users()
-    user_key = f'{provider}_{provider_id}'
 
     for uid, u in users.items():
         if u.get('oauth_provider') == provider and u.get('oauth_id') == provider_id:
@@ -218,6 +229,9 @@ def login_or_register_user(provider, provider_id, name, email):
 # ========== مسارات OAuth ==========
 @app.route('/login/google')
 def google_login():
+    if not GOOGLE_CLIENT_ID:
+        flash('تسجيل Google غير مفعل', 'warning')
+        return redirect(url_for('login'))
     google = OAuth2Session(GOOGLE_CLIENT_ID, scope=GOOGLE_SCOPE,
                           redirect_uri=url_for('google_callback', _external=True))
     authorization_url, state = google.authorization_url(GOOGLE_AUTH_URL, access_type="offline", prompt="select_account")
@@ -239,6 +253,9 @@ def google_callback():
 
 @app.route('/login/github')
 def github_login():
+    if not GITHUB_CLIENT_ID:
+        flash('تسجيل GitHub غير مفعل', 'warning')
+        return redirect(url_for('login'))
     github = OAuth2Session(GITHUB_CLIENT_ID, scope=GITHUB_SCOPE,
                           redirect_uri=url_for('github_callback', _external=True))
     authorization_url, state = github.authorization_url(GITHUB_AUTH_URL)
@@ -283,9 +300,8 @@ def view_post(post_id):
     likes = get_likes(post_id)
     liked = user_id and user_id in likes
 
-    # مقالات ذات صلة
     all_posts = get_posts()
-    related = [p for p in all_posts if p.get('id') != post_id and p.get('category') == post.get('category')][:3]
+    related = [p for p in all_posts if p.get('id') != post_id and p.get('category') == post.get('category') and p.get('published', True)][:3]
 
     content_html = markdown.markdown(post.get('content', ''), extensions=['fenced_code', 'tables', 'codehilite'])
     return render_template('post.html', post=post, comments=comments,
@@ -418,11 +434,16 @@ def logout():
 def admin():
     posts = get_posts()
     users = get_users()
+    total_comments = 0
+    total_likes = 0
+    for p in posts:
+        total_comments += len(get_comments(p.get('id', 0)))
+        total_likes += len(get_likes(p.get('id', 0)))
     return render_template('admin.html', posts=posts,
                           total_posts=len(posts),
                           total_users=len(users),
-                          total_comments=0,
-                          total_likes=0)
+                          total_comments=total_comments,
+                          total_likes=total_likes)
 
 # ========== مقال جديد ==========
 @app.route('/new-post', methods=['GET', 'POST'])
@@ -444,8 +465,10 @@ def new_post():
             'author_name': session.get('username', ''),
             'created_at': datetime.now().isoformat()
         }
-        save_post(post_id, post, 'نشر مقال جديد')
-        flash('تم نشر المقال بنجاح!', 'success')
+        if save_post(post_id, post, 'نشر مقال جديد'):
+            flash('تم نشر المقال بنجاح!', 'success')
+        else:
+            flash('فشل حفظ المقال، تأكد من GITHUB_TOKEN', 'danger')
         return redirect(url_for('my_posts'))
 
     return render_template('new_post.html')
@@ -455,7 +478,7 @@ def new_post():
 @login_required
 def my_posts():
     all_posts = get_posts()
-    posts = [p for p in all_posts if p.get('user_id') == session['user_id']]
+    posts = [p for p in all_posts if str(p.get('user_id')) == str(session['user_id'])]
     return render_template('my_posts.html', posts=posts)
 
 # ========== تعديل مقال ==========
@@ -467,7 +490,7 @@ def edit_post(post_id):
         flash('المقال غير موجود', 'danger')
         return redirect(url_for('index'))
 
-    if post.get('user_id') != session['user_id'] and not session.get('is_admin'):
+    if str(post.get('user_id')) != str(session['user_id']) and not session.get('is_admin'):
         flash('لا تملك صلاحية تعديل هذا المقال', 'danger')
         return redirect(url_for('index'))
 
@@ -494,7 +517,7 @@ def delete_post(post_id):
         flash('المقال غير موجود', 'danger')
         return redirect(url_for('index'))
 
-    if post.get('user_id') != session['user_id'] and not session.get('is_admin'):
+    if str(post.get('user_id')) != str(session['user_id']) and not session.get('is_admin'):
         flash('لا تملك صلاحية حذف هذا المقال', 'danger')
         return redirect(url_for('index'))
 
@@ -509,7 +532,7 @@ def profile():
     users = get_users()
     user = users.get(session['user_id'], {})
     all_posts = get_posts()
-    posts_count = len([p for p in all_posts if p.get('user_id') == session['user_id']])
+    posts_count = len([p for p in all_posts if str(p.get('user_id')) == str(session['user_id'])])
     return render_template('profile.html', user=user, posts_count=posts_count, comments_count=0)
 
 @app.route('/profile/edit', methods=['GET', 'POST'])
@@ -531,14 +554,16 @@ def edit_profile():
 def user_profile(username):
     users = get_users()
     user = None
-    for u in users.values():
-        if u['username'] == username:
-            user = u
+    uid = None
+    for k, v in users.items():
+        if v.get('username') == username:
+            user = v
+            uid = k
             break
     if not user:
         return render_template('404.html'), 404
     all_posts = get_posts()
-    posts = [p for p in all_posts if p.get('user_id') == list(users.keys())[list(users.values()).index(user)] and p.get('published', True)]
+    posts = [p for p in all_posts if str(p.get('user_id')) == str(uid) and p.get('published', True)]
     return render_template('public_profile.html', user=user, posts=posts, posts_count=len(posts))
 
 # ========== أخطاء ==========
