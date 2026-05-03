@@ -1,17 +1,33 @@
+"""
+نبض الحدث - مدونة عصرية مع GitHub API كقاعدة بيانات
+للرفع على Render.com
+"""
+
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from datetime import datetime, timedelta
-import sqlite3
 import os
+import json
 import markdown
+import base64
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from requests_oauthlib import OAuth2Session
+import requests
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'nubd-alhadath-secret-key-2024')
 app.permanent_session_lifetime = timedelta(days=30)
 
-# ========== إعدادات OAuth ==========
+# ========== إعدادات GitHub API ==========
+GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN', '')
+GITHUB_REPO = 'falfyrdykrwry000-blip/storage'
+GITHUB_API = f'https://api.github.com/repos/{GITHUB_REPO}/contents'
+HEADERS = {
+    'Authorization': f'token {GITHUB_TOKEN}',
+    'Accept': 'application/vnd.github.v3+json'
+}
+
+# OAuth
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
 GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
@@ -26,73 +42,120 @@ GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token'
 GITHUB_USERINFO_URL = 'https://api.github.com/user'
 GITHUB_SCOPE = ['user:email']
 
-# ========== قاعدة البيانات ==========
-def init_db():
-    conn = sqlite3.connect('blog.db')
-    c = conn.cursor()
-    
-    # جدول المقالات مع user_id
-    c.execute('''CREATE TABLE IF NOT EXISTS posts
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  title TEXT NOT NULL,
-                  content TEXT NOT NULL,
-                  summary TEXT,
-                  image_url TEXT,
-                  category TEXT DEFAULT 'عام',
-                  tags TEXT,
-                  published BOOLEAN DEFAULT 1,
-                  views INTEGER DEFAULT 0,
-                  user_id INTEGER,
-                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                  FOREIGN KEY (user_id) REFERENCES users(id))''')
-    
-    # جدول المستخدمين مع حقول إضافية للبروفايل
-    c.execute('''CREATE TABLE IF NOT EXISTS users
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  username TEXT UNIQUE NOT NULL,
-                  email TEXT,
-                  password_hash TEXT,
-                  is_admin BOOLEAN DEFAULT 0,
-                  oauth_provider TEXT,
-                  oauth_provider_id TEXT,
-                  bio TEXT DEFAULT '',
-                  website TEXT DEFAULT '',
-                  avatar_url TEXT DEFAULT '',
-                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-    
-    # جدول التعليقات
-    c.execute('''CREATE TABLE IF NOT EXISTS comments
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  post_id INTEGER,
-                  author TEXT NOT NULL,
-                  content TEXT NOT NULL,
-                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                  FOREIGN KEY (post_id) REFERENCES posts(id))''')
-    
-    # جدول الإعجابات
-    c.execute('''CREATE TABLE IF NOT EXISTS likes
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  post_id INTEGER,
-                  ip_address TEXT,
-                  user_id INTEGER,
-                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                  FOREIGN KEY (post_id) REFERENCES posts(id),
-                  FOREIGN KEY (user_id) REFERENCES users(id))''')
-    
-    # إنشاء أدمن افتراضي إذا لم يكن موجوداً
-    if not c.execute("SELECT * FROM users WHERE username='admin'").fetchone():
-        c.execute('''INSERT INTO users (username, email, password_hash, is_admin, bio)
-                     VALUES (?, ?, ?, ?, ?)''',
-                 ('admin', 'admin@example.com', generate_password_hash('admin123'), 1,
-                  'مدير ومؤسس مدونة نبض الحدث'))
-    
-    conn.commit()
-    conn.close()
+# ========== دوال GitHub API ==========
+def github_get(path):
+    """قراءة ملف من GitHub"""
+    try:
+        url = f'{GITHUB_API}/{path}'
+        r = requests.get(url, headers=HEADERS)
+        if r.status_code == 200:
+            content = base64.b64decode(r.json()['content']).decode('utf-8')
+            return json.loads(content), r.json()['sha']
+        return None, None
+    except:
+        return None, None
 
-def get_db():
-    conn = sqlite3.connect('blog.db')
-    conn.row_factory = sqlite3.Row
-    return conn
+def github_save(path, data, sha=None, message='تحديث'):
+    """حفظ ملف في GitHub"""
+    try:
+        url = f'{GITHUB_API}/{path}'
+        content = base64.b64encode(json.dumps(data, ensure_ascii=False, indent=2).encode('utf-8')).decode('utf-8')
+        body = {
+            'message': message,
+            'content': content,
+            'branch': 'master'
+        }
+        if sha:
+            body['sha'] = sha
+        r = requests.put(url, headers=HEADERS, json=body)
+        return r.status_code in [200, 201]
+    except:
+        return False
+
+def github_delete(path, sha, message='حذف'):
+    """حذف ملف من GitHub"""
+    try:
+        url = f'{GITHUB_API}/{path}'
+        body = {'message': message, 'sha': sha, 'branch': 'master'}
+        r = requests.delete(url, headers=HEADERS, json=body)
+        return r.status_code == 200
+    except:
+        return False
+
+# ========== دوال البيانات ==========
+def get_users():
+    data, _ = github_get('users.json')
+    return data if data else {}
+
+def save_users(users):
+    _, sha = github_get('users.json')
+    github_save('users.json', users, sha, 'تحديث المستخدمين')
+
+def get_posts():
+    """جلب جميع المقالات"""
+    try:
+        url = f'{GITHUB_API}/posts'
+        r = requests.get(url, headers=HEADERS)
+        posts = []
+        if r.status_code == 200:
+            for item in r.json():
+                if item['name'].endswith('.json'):
+                    content = base64.b64decode(item['content'] if 'content' in item else '').decode('utf-8')
+                    try:
+                        post = json.loads(content)
+                        post['_file'] = item['name']
+                        posts.append(post)
+                    except:
+                        pass
+        # ترتيب حسب التاريخ
+        posts.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+        return posts
+    except:
+        return []
+
+def get_post(post_id):
+    """جلب مقال واحد"""
+    data, _ = github_get(f'posts/{post_id}.json')
+    return data
+
+def save_post(post_id, data, message='تحديث مقال'):
+    """حفظ مقال"""
+    _, sha = github_get(f'posts/{post_id}.json')
+    return github_save(f'posts/{post_id}.json', data, sha, message)
+
+def delete_post_file(post_id):
+    """حذف مقال"""
+    _, sha = github_get(f'posts/{post_id}.json')
+    if sha:
+        return github_delete(f'posts/{post_id}.json', sha, 'حذف مقال')
+    return False
+
+def get_next_post_id():
+    """الحصول على رقم المقال التالي"""
+    posts = get_posts()
+    if not posts:
+        return 1
+    return max(p.get('id', 0) for p in posts) + 1
+
+def get_comments(post_id):
+    """جلب تعليقات مقال"""
+    data, _ = github_get(f'comments/{post_id}.json')
+    return data if data else []
+
+def save_comments(post_id, comments):
+    """حفظ تعليقات مقال"""
+    _, sha = github_get(f'comments/{post_id}.json')
+    return github_save(f'comments/{post_id}.json', comments, sha, 'تحديث تعليقات')
+
+def get_likes(post_id):
+    """جلب إعجابات مقال"""
+    data, _ = github_get(f'likes/{post_id}.json')
+    return data if data else []
+
+def save_likes(post_id, likes):
+    """حفظ إعجابات مقال"""
+    _, sha = github_get(f'likes/{post_id}.json')
+    return github_save(f'likes/{post_id}.json', likes, sha, 'تحديث إعجابات')
 
 # ========== الديكوريتور ==========
 def login_required(f):
@@ -116,83 +179,66 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# ========== دالة مساعدة لتسجيل الدخول الاجتماعي ==========
 def login_or_register_user(provider, provider_id, name, email):
-    db = get_db()
-    user = db.execute('SELECT * FROM users WHERE oauth_provider = ? AND oauth_provider_id = ?',
-                     (provider, provider_id)).fetchone()
+    users = get_users()
+    user_key = f'{provider}_{provider_id}'
 
-    if not user:
-        username = name or (email.split('@')[0] if email else provider + '_user')
-        # التحقق من عدم وجود اسم المستخدم
-        counter = 1
-        original_username = username
-        while db.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone():
-            username = f"{original_username}{counter}"
-            counter += 1
+    for uid, u in users.items():
+        if u.get('oauth_provider') == provider and u.get('oauth_id') == provider_id:
+            session.permanent = True
+            session['user_id'] = uid
+            session['username'] = u['username']
+            session['is_admin'] = u.get('is_admin', False)
+            flash(f'أهلاً بك، {u["username"]}!', 'success')
+            return redirect(url_for('index'))
 
-        try:
-            db.execute('''INSERT INTO users (username, email, password_hash, oauth_provider, oauth_provider_id)
-                         VALUES (?, ?, ?, ?, ?)''',
-                      (username, email, generate_password_hash(provider + str(provider_id)), provider, provider_id))
-            db.commit()
-            user = db.execute('SELECT * FROM users WHERE oauth_provider = ? AND oauth_provider_id = ?',
-                            (provider, provider_id)).fetchone()
-        except Exception as e:
-            db.close()
-            flash(f'فشل في إنشاء حساب جديد: {str(e)}', 'danger')
-            return redirect(url_for('login'))
+    # إنشاء مستخدم جديد
+    uid = str(len(users) + 1)
+    username = name or (email.split('@')[0] if email else f'{provider}_user')
+    users[uid] = {
+        'username': username,
+        'email': email,
+        'oauth_provider': provider,
+        'oauth_id': provider_id,
+        'is_admin': False,
+        'bio': '',
+        'website': '',
+        'avatar_url': '',
+        'created_at': datetime.now().isoformat()
+    }
+    save_users(users)
 
-    if user:
-        session.permanent = True
-        session['user_id'] = user['id']
-        session['username'] = user['username']
-        session['is_admin'] = user['is_admin']
-        flash(f'أهلاً بك، {user["username"]}!', 'success')
-        db.close()
-        return redirect(url_for('index'))
+    session.permanent = True
+    session['user_id'] = uid
+    session['username'] = username
+    session['is_admin'] = False
+    flash(f'أهلاً بك، {username}!', 'success')
+    return redirect(url_for('index'))
 
-    db.close()
-    flash('حدث خطأ أثناء تسجيل الدخول.', 'danger')
-    return redirect(url_for('login'))
-
-# ========== مسارات Google OAuth ==========
+# ========== مسارات OAuth ==========
 @app.route('/login/google')
 def google_login():
-    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
-        flash('تسجيل الدخول بـ Google غير مفعل حالياً', 'warning')
-        return redirect(url_for('login'))
     google = OAuth2Session(GOOGLE_CLIENT_ID, scope=GOOGLE_SCOPE,
                           redirect_uri=url_for('google_callback', _external=True))
-    authorization_url, state = google.authorization_url(GOOGLE_AUTH_URL,
-                                                        access_type="offline",
-                                                        prompt="select_account")
+    authorization_url, state = google.authorization_url(GOOGLE_AUTH_URL, access_type="offline", prompt="select_account")
     session['oauth_state'] = state
     return redirect(authorization_url)
 
 @app.route('/login/google/callback')
 def google_callback():
-    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
-        flash('تسجيل الدخول بـ Google غير مفعل حالياً', 'warning')
-        return redirect(url_for('login'))
     google = OAuth2Session(GOOGLE_CLIENT_ID, state=session.get('oauth_state'),
                           redirect_uri=url_for('google_callback', _external=True))
     try:
         token = google.fetch_token(GOOGLE_TOKEN_URL, client_secret=GOOGLE_CLIENT_SECRET,
                                   authorization_response=request.url)
         user_info = google.get(GOOGLE_USERINFO_URL).json()
-        return login_or_register_user('google', user_info['id'],
-                                     user_info.get('name'), user_info.get('email'))
-    except Exception as e:
-        flash(f'فشل تسجيل الدخول بـ Google: {str(e)}', 'danger')
+        return login_or_register_user('google', user_info['id'], user_info.get('name'), user_info.get('email'))
+    except:
+        flash('فشل تسجيل الدخول بـ Google', 'danger')
         return redirect(url_for('login'))
 
-# ========== مسارات GitHub OAuth ==========
 @app.route('/login/github')
 def github_login():
-    if not GITHUB_CLIENT_ID or not GITHUB_CLIENT_SECRET:
-        flash('تسجيل الدخول بـ GitHub غير مفعل حالياً', 'warning')
-        return redirect(url_for('login'))
     github = OAuth2Session(GITHUB_CLIENT_ID, scope=GITHUB_SCOPE,
                           redirect_uri=url_for('github_callback', _external=True))
     authorization_url, state = github.authorization_url(GITHUB_AUTH_URL)
@@ -201,126 +247,87 @@ def github_login():
 
 @app.route('/login/github/callback')
 def github_callback():
-    if not GITHUB_CLIENT_ID or not GITHUB_CLIENT_SECRET:
-        flash('تسجيل الدخول بـ GitHub غير مفعل حالياً', 'warning')
-        return redirect(url_for('login'))
     github = OAuth2Session(GITHUB_CLIENT_ID, state=session.get('oauth_state'),
                           redirect_uri=url_for('github_callback', _external=True))
     try:
         token = github.fetch_token(GITHUB_TOKEN_URL, client_secret=GITHUB_CLIENT_SECRET,
                                   authorization_response=request.url)
         user_info = github.get(GITHUB_USERINFO_URL).json()
-        email = user_info.get('email')
-        if not email:
-            emails_resp = github.get('https://api.github.com/user/emails').json()
-            primary_email = next((e['email'] for e in emails_resp if e.get('primary')), None)
-            email = primary_email
         return login_or_register_user('github', str(user_info['id']),
-                                     user_info.get('name') or user_info.get('login'), email)
-    except Exception as e:
-        flash(f'فشل تسجيل الدخول بـ GitHub: {str(e)}', 'danger')
+                                     user_info.get('name') or user_info.get('login'), user_info.get('email'))
+    except:
+        flash('فشل تسجيل الدخول بـ GitHub', 'danger')
         return redirect(url_for('login'))
 
 # ========== الصفحة الرئيسية ==========
 @app.route('/')
 def index():
-    db = get_db()
-    posts = db.execute('''
-        SELECT p.*, u.username as author_name, u.is_admin as author_is_admin,
-               (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count,
-               (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count
-        FROM posts p
-        LEFT JOIN users u ON p.user_id = u.id
-        WHERE published = 1
-        ORDER BY created_at DESC
-    ''').fetchall()
-    categories = db.execute('SELECT DISTINCT category FROM posts WHERE published = 1').fetchall()
-    db.close()
-    return render_template('index.html', posts=posts, categories=categories)
+    posts = get_posts()
+    published = [p for p in posts if p.get('published', True)]
+    categories = list(set(p.get('category', 'عام') for p in published))
+    return render_template('index.html', posts=published, categories=categories)
 
 # ========== عرض مقال ==========
 @app.route('/post/<int:post_id>')
 def view_post(post_id):
-    db = get_db()
-    post = db.execute('''
-        SELECT p.*, u.username as author_name, u.is_admin as author_is_admin, u.avatar_url as author_avatar,
-               (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count
-        FROM posts p
-        LEFT JOIN users u ON p.user_id = u.id
-        WHERE p.id = ? AND published = 1
-    ''', (post_id,)).fetchone()
-
+    post = get_post(post_id)
     if not post:
-        db.close()
         flash('المقال غير موجود', 'danger')
         return redirect(url_for('index'))
 
-    db.execute('UPDATE posts SET views = views + 1 WHERE id = ?', (post_id,))
-    comments = db.execute('SELECT * FROM comments WHERE post_id = ? ORDER BY created_at DESC', (post_id,)).fetchall()
-    ip = request.remote_addr
+    post['views'] = post.get('views', 0) + 1
+    save_post(post_id, post)
+
+    comments = get_comments(post_id)
     user_id = session.get('user_id')
-    liked = db.execute('SELECT id FROM likes WHERE post_id = ? AND user_id = ?',
-                      (post_id, user_id)).fetchone() if user_id else None
-    related = db.execute('SELECT * FROM posts WHERE category = ? AND id != ? AND published = 1 LIMIT 3',
-                        (post['category'], post_id)).fetchall()
+    likes = get_likes(post_id)
+    liked = user_id and user_id in likes
 
-    db.commit()
-    db.close()
+    # مقالات ذات صلة
+    all_posts = get_posts()
+    related = [p for p in all_posts if p.get('id') != post_id and p.get('category') == post.get('category')][:3]
 
-    content_html = markdown.markdown(post['content'], extensions=['fenced_code', 'tables', 'codehilite'])
+    content_html = markdown.markdown(post.get('content', ''), extensions=['fenced_code', 'tables', 'codehilite'])
     return render_template('post.html', post=post, comments=comments,
-                          content_html=content_html, liked=liked is not None, related=related)
+                          content_html=content_html, liked=liked, related=related,
+                          like_count=len(likes))
 
 # ========== تصنيفات ==========
 @app.route('/category/<category>')
 def category_posts(category):
-    db = get_db()
-    posts = db.execute('''
-        SELECT p.*, u.username as author_name, u.is_admin as author_is_admin
-        FROM posts p
-        LEFT JOIN users u ON p.user_id = u.id
-        WHERE p.category = ? AND published = 1
-        ORDER BY created_at DESC
-    ''', (category,)).fetchall()
-    db.close()
-    return render_template('index.html', posts=posts, current_category=category)
+    posts = get_posts()
+    filtered = [p for p in posts if p.get('published', True) and p.get('category') == category]
+    return render_template('index.html', posts=filtered, current_category=category)
 
 # ========== بحث ==========
 @app.route('/search')
 def search():
     query = request.args.get('q', '')
+    posts = get_posts()
     if query:
-        db = get_db()
-        posts = db.execute('''
-            SELECT p.*, u.username as author_name, u.is_admin as author_is_admin
-            FROM posts p
-            LEFT JOIN users u ON p.user_id = u.id
-            WHERE published = 1
-            AND (p.title LIKE ? OR p.content LIKE ? OR p.tags LIKE ?)
-            ORDER BY created_at DESC
-        ''', (f'%{query}%', f'%{query}%', f'%{query}%')).fetchall()
-        db.close()
+        published = [p for p in posts if p.get('published', True)]
+        results = [p for p in published if query.lower() in p.get('title', '').lower() or query.lower() in p.get('content', '').lower()]
     else:
-        posts = []
-    return render_template('index.html', posts=posts, search_query=query)
+        results = []
+    return render_template('index.html', posts=results, search_query=query)
 
 # ========== تعليقات ==========
 @app.route('/post/<int:post_id>/comment', methods=['POST'])
 @login_required
 def add_comment(post_id):
-    author = session.get('username', 'زائر')
     content = request.form.get('content', '')
-
     if not content.strip():
         flash('الرجاء كتابة تعليق', 'warning')
         return redirect(url_for('view_post', post_id=post_id))
 
-    db = get_db()
-    db.execute('INSERT INTO comments (post_id, author, content) VALUES (?, ?, ?)',
-              (post_id, author, content))
-    db.commit()
-    db.close()
-
+    comments = get_comments(post_id)
+    comments.append({
+        'id': len(comments) + 1,
+        'author': session.get('username', 'زائر'),
+        'content': content,
+        'created_at': datetime.now().isoformat()
+    })
+    save_comments(post_id, comments)
     flash('تم إضافة التعليق بنجاح', 'success')
     return redirect(url_for('view_post', post_id=post_id))
 
@@ -329,24 +336,17 @@ def add_comment(post_id):
 @login_required
 def like_post(post_id):
     user_id = session['user_id']
-    db = get_db()
+    likes = get_likes(post_id)
 
-    existing = db.execute('SELECT id FROM likes WHERE post_id = ? AND user_id = ?',
-                         (post_id, user_id)).fetchone()
-
-    if existing:
-        db.execute('DELETE FROM likes WHERE id = ?', (existing['id'],))
+    if user_id in likes:
+        likes.remove(user_id)
         liked = False
     else:
-        db.execute('INSERT INTO likes (post_id, user_id, ip_address) VALUES (?, ?, ?)',
-                  (post_id, user_id, request.remote_addr))
+        likes.append(user_id)
         liked = True
 
-    db.commit()
-    count = db.execute('SELECT COUNT(*) as count FROM likes WHERE post_id = ?', (post_id,)).fetchone()['count']
-    db.close()
-
-    return {'success': True, 'liked': liked, 'count': count}
+    save_likes(post_id, likes)
+    return {'success': True, 'liked': liked, 'count': len(likes)}
 
 # ========== تسجيل الدخول ==========
 @app.route('/login', methods=['GET', 'POST'])
@@ -354,51 +354,52 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+        users = get_users()
 
-        db = get_db()
-        user = db.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
-        db.close()
-
-        if user and user['password_hash'] and check_password_hash(user['password_hash'], password):
-            session.permanent = True
-            session['user_id'] = user['id']
-            session['username'] = user['username']
-            session['is_admin'] = user['is_admin']
-            flash(f'مرحباً بك، {user["username"]}!', 'success')
-            return redirect(url_for('admin' if user['is_admin'] else 'index'))
+        for uid, u in users.items():
+            if u['username'] == username and u.get('password') and check_password_hash(u['password'], password):
+                session.permanent = True
+                session['user_id'] = uid
+                session['username'] = u['username']
+                session['is_admin'] = u.get('is_admin', False)
+                flash(f'مرحباً بك، {username}!', 'success')
+                return redirect(url_for('admin' if u.get('is_admin') else 'index'))
 
         flash('اسم المستخدم أو كلمة المرور غير صحيحة', 'danger')
 
     return render_template('login.html')
 
-# ========== تسجيل حساب جديد ==========
+# ========== تسجيل ==========
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         email = request.form.get('email', '')
+        users = get_users()
 
-        db = get_db()
+        for u in users.values():
+            if u['username'] == username:
+                flash('اسم المستخدم موجود بالفعل', 'danger')
+                return render_template('register.html')
 
-        if db.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone():
-            db.close()
-            flash('اسم المستخدم موجود بالفعل', 'danger')
-            return render_template('register.html')
-
-        db.execute('INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
-                  (username, email, generate_password_hash(password)))
-        db.commit()
-
-        # تسجيل دخول تلقائي بعد التسجيل
-        user = db.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
-        db.close()
+        uid = str(len(users) + 1)
+        users[uid] = {
+            'username': username,
+            'email': email,
+            'password': generate_password_hash(password),
+            'is_admin': False,
+            'bio': '',
+            'website': '',
+            'avatar_url': '',
+            'created_at': datetime.now().isoformat()
+        }
+        save_users(users)
 
         session.permanent = True
-        session['user_id'] = user['id']
-        session['username'] = user['username']
-        session['is_admin'] = user['is_admin']
-
+        session['user_id'] = uid
+        session['username'] = username
+        session['is_admin'] = False
         flash('تم إنشاء الحساب بنجاح!', 'success')
         return redirect(url_for('index'))
 
@@ -411,45 +412,39 @@ def logout():
     flash('تم تسجيل الخروج', 'success')
     return redirect(url_for('index'))
 
-# ========== لوحة تحكم الأدمن ==========
+# ========== لوحة التحكم ==========
 @app.route('/admin')
 @admin_required
 def admin():
-    db = get_db()
-    posts = db.execute('''
-        SELECT p.*, u.username as author_name
-        FROM posts p
-        LEFT JOIN users u ON p.user_id = u.id
-        ORDER BY p.created_at DESC
-    ''').fetchall()
-    total_posts = len(posts)
-    total_users = db.execute('SELECT COUNT(*) as count FROM users').fetchone()['count']
-    total_comments = db.execute('SELECT COUNT(*) as count FROM comments').fetchone()['count']
-    total_likes = db.execute('SELECT COUNT(*) as count FROM likes').fetchone()['count']
-    db.close()
-    return render_template('admin.html', posts=posts, total_posts=total_posts,
-                          total_users=total_users, total_comments=total_comments,
-                          total_likes=total_likes)
+    posts = get_posts()
+    users = get_users()
+    return render_template('admin.html', posts=posts,
+                          total_posts=len(posts),
+                          total_users=len(users),
+                          total_comments=0,
+                          total_likes=0)
 
-# ========== مقال جديد (للمستخدمين) ==========
+# ========== مقال جديد ==========
 @app.route('/new-post', methods=['GET', 'POST'])
 @login_required
 def new_post():
     if request.method == 'POST':
-        title = request.form['title']
-        content = request.form['content']
-        summary = request.form.get('summary', '')
-        image_url = request.form.get('image_url', '')
-        category = request.form.get('category', 'عام')
-        tags = request.form.get('tags', '')
-
-        db = get_db()
-        db.execute('''INSERT INTO posts (title, content, summary, image_url, category, tags, user_id)
-                     VALUES (?, ?, ?, ?, ?, ?, ?)''',
-                  (title, content, summary, image_url, category, tags, session['user_id']))
-        db.commit()
-        db.close()
-
+        post_id = get_next_post_id()
+        post = {
+            'id': post_id,
+            'title': request.form['title'],
+            'content': request.form['content'],
+            'summary': request.form.get('summary', ''),
+            'image_url': request.form.get('image_url', ''),
+            'category': request.form.get('category', 'عام'),
+            'tags': request.form.get('tags', ''),
+            'published': True,
+            'views': 0,
+            'user_id': session['user_id'],
+            'author_name': session.get('username', ''),
+            'created_at': datetime.now().isoformat()
+        }
+        save_post(post_id, post, 'نشر مقال جديد')
         flash('تم نشر المقال بنجاح!', 'success')
         return redirect(url_for('my_posts'))
 
@@ -459,83 +454,51 @@ def new_post():
 @app.route('/my-posts')
 @login_required
 def my_posts():
-    db = get_db()
-    posts = db.execute('''
-        SELECT p.*, u.username as author_name,
-               (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count,
-               (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count
-        FROM posts p
-        LEFT JOIN users u ON p.user_id = u.id
-        WHERE p.user_id = ?
-        ORDER BY p.created_at DESC
-    ''', (session['user_id'],)).fetchall()
-    db.close()
+    all_posts = get_posts()
+    posts = [p for p in all_posts if p.get('user_id') == session['user_id']]
     return render_template('my_posts.html', posts=posts)
 
 # ========== تعديل مقال ==========
 @app.route('/edit-post/<int:post_id>', methods=['GET', 'POST'])
 @login_required
 def edit_post(post_id):
-    db = get_db()
-    post = db.execute('SELECT * FROM posts WHERE id = ?', (post_id,)).fetchone()
-
+    post = get_post(post_id)
     if not post:
-        db.close()
         flash('المقال غير موجود', 'danger')
         return redirect(url_for('index'))
 
-    # فقط صاحب المقال أو الأدمن يقدر يعدل
-    if post['user_id'] != session['user_id'] and not session.get('is_admin'):
-        db.close()
+    if post.get('user_id') != session['user_id'] and not session.get('is_admin'):
         flash('لا تملك صلاحية تعديل هذا المقال', 'danger')
         return redirect(url_for('index'))
 
     if request.method == 'POST':
-        title = request.form['title']
-        content = request.form['content']
-        summary = request.form.get('summary', '')
-        image_url = request.form.get('image_url', '')
-        category = request.form.get('category', 'عام')
-        tags = request.form.get('tags', '')
-        published = 'published' in request.form
-
-        db.execute('''UPDATE posts
-                     SET title=?, content=?, summary=?, image_url=?, category=?, tags=?, published=?
-                     WHERE id=?''',
-                  (title, content, summary, image_url, category, tags, published, post_id))
-        db.commit()
-        db.close()
-
+        post['title'] = request.form['title']
+        post['content'] = request.form['content']
+        post['summary'] = request.form.get('summary', '')
+        post['image_url'] = request.form.get('image_url', '')
+        post['category'] = request.form.get('category', 'عام')
+        post['tags'] = request.form.get('tags', '')
+        post['published'] = 'published' in request.form
+        save_post(post_id, post, 'تحديث مقال')
         flash('تم تحديث المقال بنجاح!', 'success')
         return redirect(url_for('my_posts'))
 
-    db.close()
     return render_template('edit_post.html', post=post)
 
 # ========== حذف مقال ==========
 @app.route('/delete-post/<int:post_id>')
 @login_required
 def delete_post(post_id):
-    db = get_db()
-    post = db.execute('SELECT * FROM posts WHERE id = ?', (post_id,)).fetchone()
-
+    post = get_post(post_id)
     if not post:
-        db.close()
         flash('المقال غير موجود', 'danger')
         return redirect(url_for('index'))
 
-    # فقط صاحب المقال أو الأدمن يقدر يحذف
-    if post['user_id'] != session['user_id'] and not session.get('is_admin'):
-        db.close()
+    if post.get('user_id') != session['user_id'] and not session.get('is_admin'):
         flash('لا تملك صلاحية حذف هذا المقال', 'danger')
         return redirect(url_for('index'))
 
-    db.execute('DELETE FROM comments WHERE post_id = ?', (post_id,))
-    db.execute('DELETE FROM likes WHERE post_id = ?', (post_id,))
-    db.execute('DELETE FROM posts WHERE id = ?', (post_id,))
-    db.commit()
-    db.close()
-
+    delete_post_file(post_id)
     flash('تم حذف المقال بنجاح', 'success')
     return redirect(url_for('my_posts'))
 
@@ -543,57 +506,42 @@ def delete_post(post_id):
 @app.route('/profile')
 @login_required
 def profile():
-    db = get_db()
-    user = db.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],)).fetchone()
-    posts_count = db.execute('SELECT COUNT(*) as count FROM posts WHERE user_id = ?',
-                            (session['user_id'],)).fetchone()['count']
-    comments_count = db.execute('SELECT COUNT(*) as count FROM comments WHERE author = ?',
-                               (session['username'],)).fetchone()['count']
-    db.close()
-    return render_template('profile.html', user=user, posts_count=posts_count,
-                          comments_count=comments_count)
+    users = get_users()
+    user = users.get(session['user_id'], {})
+    all_posts = get_posts()
+    posts_count = len([p for p in all_posts if p.get('user_id') == session['user_id']])
+    return render_template('profile.html', user=user, posts_count=posts_count, comments_count=0)
 
-# ========== تعديل الملف الشخصي ==========
 @app.route('/profile/edit', methods=['GET', 'POST'])
 @login_required
 def edit_profile():
+    users = get_users()
+    user = users.get(session['user_id'], {})
     if request.method == 'POST':
-        bio = request.form.get('bio', '')
-        website = request.form.get('website', '')
-        avatar_url = request.form.get('avatar_url', '')
-
-        db = get_db()
-        db.execute('UPDATE users SET bio=?, website=?, avatar_url=? WHERE id=?',
-                  (bio, website, avatar_url, session['user_id']))
-        db.commit()
-        db.close()
-
-        flash('تم تحديث الملف الشخصي بنجاح', 'success')
+        user['bio'] = request.form.get('bio', '')
+        user['website'] = request.form.get('website', '')
+        user['avatar_url'] = request.form.get('avatar_url', '')
+        users[session['user_id']] = user
+        save_users(users)
+        flash('تم تحديث الملف الشخصي', 'success')
         return redirect(url_for('profile'))
-
-    db = get_db()
-    user = db.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],)).fetchone()
-    db.close()
     return render_template('edit_profile.html', user=user)
 
-# ========== بروفايل عام ==========
 @app.route('/user/<username>')
 def user_profile(username):
-    db = get_db()
-    user = db.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+    users = get_users()
+    user = None
+    for u in users.values():
+        if u['username'] == username:
+            user = u
+            break
     if not user:
-        db.close()
         return render_template('404.html'), 404
-    posts = db.execute('''
-        SELECT * FROM posts
-        WHERE user_id = ? AND published = 1
-        ORDER BY created_at DESC
-    ''', (user['id'],)).fetchall()
-    posts_count = len(posts)
-    db.close()
-    return render_template('public_profile.html', user=user, posts=posts, posts_count=posts_count)
+    all_posts = get_posts()
+    posts = [p for p in all_posts if p.get('user_id') == list(users.keys())[list(users.values()).index(user)] and p.get('published', True)]
+    return render_template('public_profile.html', user=user, posts=posts, posts_count=len(posts))
 
-# ========== معالجة الأخطاء ==========
+# ========== أخطاء ==========
 @app.errorhandler(404)
 def not_found(e):
     return render_template('404.html'), 404
@@ -602,8 +550,7 @@ def not_found(e):
 def server_error(e):
     return render_template('500.html'), 500
 
-# ========== بدء التطبيق ==========
+# ========== بدء ==========
 if __name__ == '__main__':
-    init_db()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
