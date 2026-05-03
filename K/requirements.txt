@@ -2,4 +2,3 @@ flask==3.0.0
 markdown==3.5.1
 werkzeug==3.0.1
 requests-oauthlib==2.0.0
-pg8000==1.31.2
