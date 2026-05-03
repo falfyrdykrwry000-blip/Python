@@ -2,8 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from datetime import datetime, timedelta
 import os
 import markdown
-import psycopg2
-import psycopg2.extras
+import pg8000.native
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from requests_oauthlib import OAuth2Session
@@ -15,15 +14,36 @@ app.permanent_session_lifetime = timedelta(days=30)
 # ========== قاعدة البيانات ==========
 DATABASE_URL = os.environ.get('DATABASE_URL', '')
 
+def parse_db_url(url):
+    """تحليل رابط PostgreSQL"""
+    # postgresql://user:pass@host:5432/dbname
+    url = url.replace('postgresql://', '')
+    auth, rest = url.split('@')
+    user, password = auth.split(':')
+    host_port, dbname = rest.split('/')
+    host, port = host_port.split(':')
+    return {
+        'host': host,
+        'port': int(port),
+        'user': user,
+        'password': password,
+        'database': dbname
+    }
+
 def get_db():
-    conn = psycopg2.connect(DATABASE_URL)
-    conn.cursor_factory = psycopg2.extras.RealDictCursor
+    config = parse_db_url(DATABASE_URL)
+    conn = pg8000.native.Connection(
+        host=config['host'],
+        port=config['port'],
+        user=config['user'],
+        password=config['password'],
+        database=config['database']
+    )
     return conn
 
 def init_db():
     conn = get_db()
-    c = conn.cursor()
-    c.execute('''
+    conn.run('''
         CREATE TABLE IF NOT EXISTS posts (
             id SERIAL PRIMARY KEY,
             title TEXT NOT NULL,
@@ -38,7 +58,7 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
-    c.execute('''
+    conn.run('''
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
@@ -53,7 +73,7 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
-    c.execute('''
+    conn.run('''
         CREATE TABLE IF NOT EXISTS comments (
             id SERIAL PRIMARY KEY,
             post_id INTEGER,
@@ -62,7 +82,7 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
-    c.execute('''
+    conn.run('''
         CREATE TABLE IF NOT EXISTS likes (
             id SERIAL PRIMARY KEY,
             post_id INTEGER,
@@ -71,12 +91,23 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
-    c.execute("SELECT * FROM users WHERE username='admin'")
-    if not c.fetchone():
-        c.execute("INSERT INTO users (username, email, password_hash, is_admin, bio) VALUES (%s, %s, %s, %s, %s)",
-                 ('admin', 'admin@example.com', generate_password_hash('admin123'), True, 'مدير المدونة'))
-    conn.commit()
+    # أدمن افتراضي
+    rows = conn.run("SELECT * FROM users WHERE username='admin'")
+    if not rows:
+        conn.run("INSERT INTO users (username, email, password_hash, is_admin, bio) VALUES (:u, :e, :p, :a, :b)",
+                 u='admin', e='admin@example.com', p=generate_password_hash('admin123'), a=True, b='مدير المدونة')
     conn.close()
+
+def dict_row(columns, row):
+    if row is None:
+        return None
+    return dict(zip(columns, row))
+
+def fetch_all(conn, sql, **params):
+    columns = [d['name'] for d in conn.run("SELECT column_name FROM information_schema.columns WHERE table_name = 'posts'")]
+    # طريقة أبسط: نرجع كمصفوفة
+    rows = conn.run(sql, **params)
+    return rows
 
 # ========== OAuth ==========
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
@@ -93,7 +124,6 @@ GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token'
 GITHUB_USERINFO_URL = 'https://api.github.com/user'
 GITHUB_SCOPE = ['user:email']
 
-# ========== الديكوريتور ==========
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -116,36 +146,33 @@ def admin_required(f):
     return decorated_function
 
 def login_or_register_user(provider, provider_id, name, email):
-    db = get_db()
-    c = db.cursor()
-    c.execute("SELECT * FROM users WHERE oauth_provider = %s AND oauth_provider_id = %s", (provider, provider_id))
-    user = c.fetchone()
-    if not user:
+    conn = get_db()
+    rows = conn.run("SELECT * FROM users WHERE oauth_provider = :p AND oauth_provider_id = :i",
+                    p=provider, i=provider_id)
+    if not rows:
         username = name or (email.split('@')[0] if email else provider + '_user')
         counter = 1
         original_username = username
-        while True:
-            c.execute("SELECT id FROM users WHERE username = %s", (username,))
-            if not c.fetchone():
-                break
+        while conn.run("SELECT id FROM users WHERE username = :u", u=username):
             username = f"{original_username}{counter}"
             counter += 1
-        c.execute("INSERT INTO users (username, email, password_hash, oauth_provider, oauth_provider_id) VALUES (%s, %s, %s, %s, %s) RETURNING *",
-                 (username, email, generate_password_hash(provider + str(provider_id)), provider, provider_id))
-        db.commit()
-        user = c.fetchone()
-    if user:
+        conn.run("INSERT INTO users (username, email, password_hash, oauth_provider, oauth_provider_id) VALUES (:u, :e, :p, :pr, :i)",
+                 u=username, e=email, p=generate_password_hash(provider + str(provider_id)), pr=provider, i=provider_id)
+        rows = conn.run("SELECT * FROM users WHERE oauth_provider = :p AND oauth_provider_id = :i",
+                        p=provider, i=provider_id)
+    if rows:
+        user = rows[0]
         session.permanent = True
-        session['user_id'] = user['id']
-        session['username'] = user['username']
-        session['is_admin'] = user['is_admin']
-        flash(f'أهلاً بك، {user["username"]}!', 'success')
-        db.close()
+        session['user_id'] = user[0]
+        session['username'] = user[1]
+        session['is_admin'] = user[4]
+        flash(f'أهلاً بك، {user[1]}!', 'success')
+        conn.close()
         return redirect(url_for('index'))
-    db.close()
+    conn.close()
     return redirect(url_for('login'))
 
-# ========== OAuth Routes ==========
+# OAuth Routes
 @app.route('/login/google')
 def google_login():
     if not GOOGLE_CLIENT_ID:
@@ -190,100 +217,112 @@ def github_callback():
                                   authorization_response=request.url)
         user_info = github.get(GITHUB_USERINFO_URL).json()
         email = user_info.get('email')
-        if not email:
-            emails_resp = github.get('https://api.github.com/user/emails').json()
-            email = next((e['email'] for e in emails_resp if e.get('primary')), None)
         return login_or_register_user('github', str(user_info['id']),
                                      user_info.get('name') or user_info.get('login'), email)
     except:
         flash('فشل تسجيل الدخول بـ GitHub', 'danger')
         return redirect(url_for('login'))
 
-# ========== الصفحة الرئيسية ==========
+# ========== الرئيسية ==========
 @app.route('/')
 def index():
-    db = get_db()
-    c = db.cursor()
-    c.execute('''
+    conn = get_db()
+    posts = conn.run('''
         SELECT p.*, u.username as author_name, u.is_admin as author_is_admin,
                (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count,
                (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count
         FROM posts p LEFT JOIN users u ON p.user_id = u.id
         WHERE p.published = TRUE ORDER BY p.created_at DESC
     ''')
-    posts = c.fetchall()
-    c.execute('SELECT DISTINCT category FROM posts WHERE published = TRUE')
-    categories = c.fetchall()
-    db.close()
-    return render_template('index.html', posts=posts, categories=categories)
+    cats = conn.run('SELECT DISTINCT category FROM posts WHERE published = TRUE')
+    categories = [c[0] for c in cats]
+    conn.close()
+    
+    posts_list = []
+    for p in posts:
+        posts_list.append({
+            'id': p[0], 'title': p[1], 'content': p[2], 'summary': p[3],
+            'image_url': p[4], 'category': p[5], 'tags': p[6], 'published': p[7],
+            'views': p[8], 'user_id': p[9], 'created_at': p[10],
+            'author_name': p[11], 'author_is_admin': p[12],
+            'comment_count': p[13], 'like_count': p[14]
+        })
+    return render_template('index.html', posts=posts_list, categories=categories)
 
-# ========== عرض مقال ==========
+# ========== مقال ==========
 @app.route('/post/<int:post_id>')
 def view_post(post_id):
-    db = get_db()
-    c = db.cursor()
-    c.execute('''
+    conn = get_db()
+    rows = conn.run('''
         SELECT p.*, u.username as author_name, u.is_admin as author_is_admin, u.avatar_url as author_avatar,
                (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count
         FROM posts p LEFT JOIN users u ON p.user_id = u.id
-        WHERE p.id = %s AND p.published = TRUE
-    ''', (post_id,))
-    post = c.fetchone()
-    if not post:
-        db.close()
+        WHERE p.id = :id AND p.published = TRUE
+    ''', id=post_id)
+    if not rows:
+        conn.close()
         flash('المقال غير موجود', 'danger')
         return redirect(url_for('index'))
-    c.execute('UPDATE posts SET views = views + 1 WHERE id = %s', (post_id,))
-    c.execute('SELECT * FROM comments WHERE post_id = %s ORDER BY created_at DESC', (post_id,))
-    comments = c.fetchall()
+    p = rows[0]
+    conn.run('UPDATE posts SET views = views + 1 WHERE id = :id', id=post_id)
+    comments = conn.run('SELECT * FROM comments WHERE post_id = :id ORDER BY created_at DESC', id=post_id)
     user_id = session.get('user_id')
     liked = None
     if user_id:
-        c.execute('SELECT id FROM likes WHERE post_id = %s AND user_id = %s', (post_id, user_id))
-        liked = c.fetchone()
-    c.execute('SELECT * FROM posts WHERE category = %s AND id != %s AND published = TRUE LIMIT 3',
-              (post['category'], post_id))
-    related = c.fetchall()
-    db.commit()
-    db.close()
+        liked = conn.run('SELECT id FROM likes WHERE post_id = :p AND user_id = :u', p=post_id, u=user_id)
+    related = conn.run('SELECT * FROM posts WHERE category = :c AND id != :i AND published = TRUE LIMIT 3',
+                       c=p[5], i=post_id)
+    conn.close()
+    
+    post = {
+        'id': p[0], 'title': p[1], 'content': p[2], 'summary': p[3],
+        'image_url': p[4], 'category': p[5], 'tags': p[6], 'published': p[7],
+        'views': p[8], 'user_id': p[9], 'created_at': p[10],
+        'author_name': p[11], 'author_is_admin': p[12], 'author_avatar': p[13],
+        'like_count': p[14]
+    }
     content_html = markdown.markdown(post['content'], extensions=['fenced_code', 'tables', 'codehilite'])
     return render_template('post.html', post=post, comments=comments,
-                          content_html=content_html, liked=liked is not None, related=related)
+                          content_html=content_html, liked=liked is not None and len(liked) > 0,
+                          related=related)
 
-# ========== تصنيفات ==========
+# ========== تصنيفات وبحث ==========
 @app.route('/category/<category>')
 def category_posts(category):
-    db = get_db()
-    c = db.cursor()
-    c.execute('''
+    conn = get_db()
+    posts = conn.run('''
         SELECT p.*, u.username as author_name, u.is_admin as author_is_admin
         FROM posts p LEFT JOIN users u ON p.user_id = u.id
-        WHERE p.category = %s AND p.published = TRUE ORDER BY p.created_at DESC
-    ''', (category,))
-    posts = c.fetchall()
-    db.close()
-    return render_template('index.html', posts=posts, current_category=category)
+        WHERE p.category = :c AND p.published = TRUE ORDER BY p.created_at DESC
+    ''', c=category)
+    conn.close()
+    posts_list = [{'id': r[0], 'title': r[1], 'content': r[2], 'summary': r[3],
+                   'image_url': r[4], 'category': r[5], 'tags': r[6], 'published': r[7],
+                   'views': r[8], 'user_id': r[9], 'created_at': r[10],
+                   'author_name': r[11], 'author_is_admin': r[12]} for r in posts]
+    return render_template('index.html', posts=posts_list, current_category=category)
 
-# ========== بحث ==========
 @app.route('/search')
 def search():
     query = request.args.get('q', '')
     if query:
-        db = get_db()
-        c = db.cursor()
-        c.execute('''
+        conn = get_db()
+        posts = conn.run('''
             SELECT p.*, u.username as author_name, u.is_admin as author_is_admin
             FROM posts p LEFT JOIN users u ON p.user_id = u.id
-            WHERE p.published = TRUE AND (p.title ILIKE %s OR p.content ILIKE %s OR p.tags ILIKE %s)
+            WHERE p.published = TRUE AND (p.title ILIKE :q OR p.content ILIKE :q OR p.tags ILIKE :q)
             ORDER BY p.created_at DESC
-        ''', (f'%{query}%', f'%{query}%', f'%{query}%'))
-        posts = c.fetchall()
-        db.close()
+        ''', q=f'%{query}%')
+        conn.close()
+        posts_list = [{'id': r[0], 'title': r[1], 'content': r[2], 'summary': r[3],
+                       'image_url': r[4], 'category': r[5], 'tags': r[6], 'published': r[7],
+                       'views': r[8], 'user_id': r[9], 'created_at': r[10],
+                       'author_name': r[11], 'author_is_admin': r[12]} for r in posts]
     else:
-        posts = []
-    return render_template('index.html', posts=posts, search_query=query)
+        posts_list = []
+    return render_template('index.html', posts=posts_list, search_query=query)
 
-# ========== تعليقات ==========
+# ========== تعليقات وإعجاب ==========
 @app.route('/post/<int:post_id>/comment', methods=['POST'])
 @login_required
 def add_comment(post_id):
@@ -291,86 +330,75 @@ def add_comment(post_id):
     if not content.strip():
         flash('الرجاء كتابة تعليق', 'warning')
         return redirect(url_for('view_post', post_id=post_id))
-    db = get_db()
-    c = db.cursor()
-    c.execute('INSERT INTO comments (post_id, author, content) VALUES (%s, %s, %s)',
-              (post_id, session.get('username', 'زائر'), content))
-    db.commit()
-    db.close()
+    conn = get_db()
+    conn.run('INSERT INTO comments (post_id, author, content) VALUES (:p, :a, :c)',
+             p=post_id, a=session.get('username', 'زائر'), c=content)
+    conn.close()
     flash('تم إضافة التعليق بنجاح', 'success')
     return redirect(url_for('view_post', post_id=post_id))
 
-# ========== إعجاب ==========
 @app.route('/like/<int:post_id>', methods=['POST'])
 @login_required
 def like_post(post_id):
     user_id = session['user_id']
-    db = get_db()
-    c = db.cursor()
-    c.execute('SELECT id FROM likes WHERE post_id = %s AND user_id = %s', (post_id, user_id))
-    existing = c.fetchone()
+    conn = get_db()
+    existing = conn.run('SELECT id FROM likes WHERE post_id = :p AND user_id = :u', p=post_id, u=user_id)
     if existing:
-        c.execute('DELETE FROM likes WHERE id = %s', (existing['id'],))
+        conn.run('DELETE FROM likes WHERE id = :i', i=existing[0][0])
         liked = False
     else:
-        c.execute('INSERT INTO likes (post_id, user_id, ip_address) VALUES (%s, %s, %s)',
-                  (post_id, user_id, request.remote_addr))
+        conn.run('INSERT INTO likes (post_id, user_id, ip_address) VALUES (:p, :u, :ip)',
+                 p=post_id, u=user_id, ip=request.remote_addr)
         liked = True
-    db.commit()
-    c.execute('SELECT COUNT(*) as c FROM likes WHERE post_id = %s', (post_id,))
-    count = c.fetchone()['c']
-    db.close()
+    count = conn.run('SELECT COUNT(*) FROM likes WHERE post_id = :p', p=post_id)[0][0]
+    conn.close()
     return {'success': True, 'liked': liked, 'count': count}
 
-# ========== تسجيل الدخول ==========
+# ========== دخول وتسجيل ==========
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        db = get_db()
-        c = db.cursor()
-        c.execute('SELECT * FROM users WHERE username = %s', (username,))
-        user = c.fetchone()
-        db.close()
-        if user and user['password_hash'] and check_password_hash(user['password_hash'], password):
-            session.permanent = True
-            session['user_id'] = user['id']
-            session['username'] = user['username']
-            session['is_admin'] = user['is_admin']
-            flash(f'مرحباً بك، {username}!', 'success')
-            return redirect(url_for('admin' if user['is_admin'] else 'index'))
+        conn = get_db()
+        rows = conn.run('SELECT * FROM users WHERE username = :u', u=username)
+        conn.close()
+        if rows:
+            user = rows[0]
+            if user[3] and check_password_hash(user[3], password):
+                session.permanent = True
+                session['user_id'] = user[0]
+                session['username'] = user[1]
+                session['is_admin'] = user[4]
+                flash(f'مرحباً بك، {username}!', 'success')
+                return redirect(url_for('admin' if user[4] else 'index'))
         flash('اسم المستخدم أو كلمة المرور غير صحيحة', 'danger')
     return render_template('login.html')
 
-# ========== تسجيل ==========
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         email = request.form.get('email', '')
-        db = get_db()
-        c = db.cursor()
-        c.execute('SELECT id FROM users WHERE username = %s', (username,))
-        if c.fetchone():
-            db.close()
+        conn = get_db()
+        if conn.run('SELECT id FROM users WHERE username = :u', u=username):
+            conn.close()
             flash('اسم المستخدم موجود بالفعل', 'danger')
             return render_template('register.html')
-        c.execute('INSERT INTO users (username, email, password_hash) VALUES (%s, %s, %s) RETURNING *',
-                  (username, email, generate_password_hash(password)))
-        db.commit()
-        user = c.fetchone()
-        db.close()
+        conn.run('INSERT INTO users (username, email, password_hash) VALUES (:u, :e, :p)',
+                 u=username, e=email, p=generate_password_hash(password))
+        rows = conn.run('SELECT * FROM users WHERE username = :u', u=username)
+        conn.close()
+        user = rows[0]
         session.permanent = True
-        session['user_id'] = user['id']
-        session['username'] = user['username']
-        session['is_admin'] = user['is_admin']
+        session['user_id'] = user[0]
+        session['username'] = user[1]
+        session['is_admin'] = user[4]
         flash('تم إنشاء الحساب بنجاح!', 'success')
         return redirect(url_for('index'))
     return render_template('register.html')
 
-# ========== تسجيل الخروج ==========
 @app.route('/logout')
 def logout():
     session.clear()
@@ -381,22 +409,21 @@ def logout():
 @app.route('/admin')
 @admin_required
 def admin():
-    db = get_db()
-    c = db.cursor()
-    c.execute('''
+    conn = get_db()
+    posts = conn.run('''
         SELECT p.*, u.username as author_name
         FROM posts p LEFT JOIN users u ON p.user_id = u.id
         ORDER BY p.created_at DESC
     ''')
-    posts = c.fetchall()
-    c.execute('SELECT COUNT(*) as c FROM users')
-    total_users = c.fetchone()['c']
-    c.execute('SELECT COUNT(*) as c FROM comments')
-    total_comments = c.fetchone()['c']
-    c.execute('SELECT COUNT(*) as c FROM likes')
-    total_likes = c.fetchone()['c']
-    db.close()
-    return render_template('admin.html', posts=posts, total_posts=len(posts),
+    total_users = conn.run('SELECT COUNT(*) FROM users')[0][0]
+    total_comments = conn.run('SELECT COUNT(*) FROM comments')[0][0]
+    total_likes = conn.run('SELECT COUNT(*) FROM likes')[0][0]
+    conn.close()
+    posts_list = [{'id': r[0], 'title': r[1], 'content': r[2], 'summary': r[3],
+                   'image_url': r[4], 'category': r[5], 'tags': r[6], 'published': r[7],
+                   'views': r[8], 'user_id': r[9], 'created_at': r[10],
+                   'author_name': r[11]} for r in posts]
+    return render_template('admin.html', posts=posts_list, total_posts=len(posts_list),
                           total_users=total_users, total_comments=total_comments, total_likes=total_likes)
 
 # ========== مقال جديد ==========
@@ -404,137 +431,138 @@ def admin():
 @login_required
 def new_post():
     if request.method == 'POST':
-        db = get_db()
-        c = db.cursor()
-        c.execute('''INSERT INTO posts (title, content, summary, image_url, category, tags, user_id)
-                     VALUES (%s, %s, %s, %s, %s, %s, %s)''',
-                  (request.form['title'], request.form['content'], request.form.get('summary', ''),
-                   request.form.get('image_url', ''), request.form.get('category', 'عام'),
-                   request.form.get('tags', ''), session['user_id']))
-        db.commit()
-        db.close()
+        conn = get_db()
+        conn.run('''INSERT INTO posts (title, content, summary, image_url, category, tags, user_id)
+                    VALUES (:t, :c, :s, :i, :cat, :tag, :u)''',
+                 t=request.form['title'], c=request.form['content'],
+                 s=request.form.get('summary', ''), i=request.form.get('image_url', ''),
+                 cat=request.form.get('category', 'عام'), tag=request.form.get('tags', ''),
+                 u=session['user_id'])
+        conn.close()
         flash('تم نشر المقال بنجاح!', 'success')
         return redirect(url_for('my_posts'))
     return render_template('new_post.html')
 
-# ========== منشوراتي ==========
 @app.route('/my-posts')
 @login_required
 def my_posts():
-    db = get_db()
-    c = db.cursor()
-    c.execute('''
+    conn = get_db()
+    posts = conn.run('''
         SELECT p.*, u.username as author_name,
                (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count,
                (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count
         FROM posts p LEFT JOIN users u ON p.user_id = u.id
-        WHERE p.user_id = %s ORDER BY p.created_at DESC
-    ''', (session['user_id'],))
-    posts = c.fetchall()
-    db.close()
-    return render_template('my_posts.html', posts=posts)
+        WHERE p.user_id = :u ORDER BY p.created_at DESC
+    ''', u=session['user_id'])
+    conn.close()
+    posts_list = [{'id': r[0], 'title': r[1], 'content': r[2], 'summary': r[3],
+                   'image_url': r[4], 'category': r[5], 'tags': r[6], 'published': r[7],
+                   'views': r[8], 'user_id': r[9], 'created_at': r[10],
+                   'author_name': r[11], 'comment_count': r[12], 'like_count': r[13]} for r in posts]
+    return render_template('my_posts.html', posts=posts_list)
 
-# ========== تعديل مقال ==========
 @app.route('/edit-post/<int:post_id>', methods=['GET', 'POST'])
 @login_required
 def edit_post(post_id):
-    db = get_db()
-    c = db.cursor()
-    c.execute('SELECT * FROM posts WHERE id = %s', (post_id,))
-    post = c.fetchone()
-    if not post:
-        db.close()
+    conn = get_db()
+    rows = conn.run('SELECT * FROM posts WHERE id = :i', i=post_id)
+    if not rows:
+        conn.close()
         flash('المقال غير موجود', 'danger')
         return redirect(url_for('index'))
-    if post['user_id'] != session['user_id'] and not session.get('is_admin'):
-        db.close()
-        flash('لا تملك صلاحية تعديل هذا المقال', 'danger')
+    post = rows[0]
+    if post[9] != session['user_id'] and not session.get('is_admin'):
+        conn.close()
+        flash('لا تملك صلاحية', 'danger')
         return redirect(url_for('index'))
     if request.method == 'POST':
-        c.execute('''UPDATE posts SET title=%s, content=%s, summary=%s, image_url=%s, category=%s, tags=%s, published=%s
-                     WHERE id=%s''',
-                  (request.form['title'], request.form['content'], request.form.get('summary', ''),
-                   request.form.get('image_url', ''), request.form.get('category', 'عام'),
-                   request.form.get('tags', ''), 'published' in request.form, post_id))
-        db.commit()
-        db.close()
-        flash('تم تحديث المقال بنجاح!', 'success')
+        pub = 'published' in request.form
+        conn.run('''UPDATE posts SET title=:t, content=:c, summary=:s, image_url=:i, category=:cat, tags=:tag, published=:p
+                    WHERE id=:id''',
+                 t=request.form['title'], c=request.form['content'],
+                 s=request.form.get('summary', ''), i=request.form.get('image_url', ''),
+                 cat=request.form.get('category', 'عام'), tag=request.form.get('tags', ''),
+                 p=pub, id=post_id)
+        conn.close()
+        flash('تم تحديث المقال!', 'success')
         return redirect(url_for('my_posts'))
-    db.close()
-    return render_template('edit_post.html', post=post)
+    conn.close()
+    post_dict = {'id': post[0], 'title': post[1], 'content': post[2], 'summary': post[3],
+                 'image_url': post[4], 'category': post[5], 'tags': post[6], 'published': post[7],
+                 'views': post[8], 'user_id': post[9], 'created_at': post[10]}
+    return render_template('edit_post.html', post=post_dict)
 
-# ========== حذف مقال ==========
 @app.route('/delete-post/<int:post_id>')
 @login_required
 def delete_post(post_id):
-    db = get_db()
-    c = db.cursor()
-    c.execute('SELECT * FROM posts WHERE id = %s', (post_id,))
-    post = c.fetchone()
-    if not post:
-        db.close()
+    conn = get_db()
+    rows = conn.run('SELECT * FROM posts WHERE id = :i', i=post_id)
+    if not rows:
+        conn.close()
         flash('المقال غير موجود', 'danger')
         return redirect(url_for('index'))
-    if post['user_id'] != session['user_id'] and not session.get('is_admin'):
-        db.close()
-        flash('لا تملك صلاحية حذف هذا المقال', 'danger')
+    if rows[0][9] != session['user_id'] and not session.get('is_admin'):
+        conn.close()
+        flash('لا تملك صلاحية', 'danger')
         return redirect(url_for('index'))
-    c.execute('DELETE FROM comments WHERE post_id = %s', (post_id,))
-    c.execute('DELETE FROM likes WHERE post_id = %s', (post_id,))
-    c.execute('DELETE FROM posts WHERE id = %s', (post_id,))
-    db.commit()
-    db.close()
-    flash('تم حذف المقال بنجاح', 'success')
+    conn.run('DELETE FROM comments WHERE post_id = :p', p=post_id)
+    conn.run('DELETE FROM likes WHERE post_id = :p', p=post_id)
+    conn.run('DELETE FROM posts WHERE id = :p', p=post_id)
+    conn.close()
+    flash('تم حذف المقال', 'success')
     return redirect(url_for('my_posts'))
 
-# ========== ملف شخصي ==========
 @app.route('/profile')
 @login_required
 def profile():
-    db = get_db()
-    c = db.cursor()
-    c.execute('SELECT * FROM users WHERE id = %s', (session['user_id'],))
-    user = c.fetchone()
-    c.execute('SELECT COUNT(*) as c FROM posts WHERE user_id = %s', (session['user_id'],))
-    posts_count = c.fetchone()['c']
-    c.execute('SELECT COUNT(*) as c FROM comments WHERE author = %s', (session['username'],))
-    comments_count = c.fetchone()['c']
-    db.close()
-    return render_template('profile.html', user=user, posts_count=posts_count, comments_count=comments_count)
+    conn = get_db()
+    rows = conn.run('SELECT * FROM users WHERE id = :u', u=session['user_id'])
+    user = rows[0]
+    posts_count = conn.run('SELECT COUNT(*) FROM posts WHERE user_id = :u', u=session['user_id'])[0][0]
+    comments_count = conn.run('SELECT COUNT(*) FROM comments WHERE author = :a', a=session['username'])[0][0]
+    conn.close()
+    user_dict = {'id': user[0], 'username': user[1], 'email': user[2], 'is_admin': user[4],
+                 'oauth_provider': user[5], 'bio': user[7], 'website': user[8],
+                 'avatar_url': user[9], 'created_at': user[10]}
+    return render_template('profile.html', user=user_dict, posts_count=posts_count, comments_count=comments_count)
 
 @app.route('/profile/edit', methods=['GET', 'POST'])
 @login_required
 def edit_profile():
     if request.method == 'POST':
-        db = get_db()
-        c = db.cursor()
-        c.execute('UPDATE users SET bio=%s, website=%s, avatar_url=%s WHERE id=%s',
-                  (request.form.get('bio', ''), request.form.get('website', ''),
-                   request.form.get('avatar_url', ''), session['user_id']))
-        db.commit()
-        db.close()
+        conn = get_db()
+        conn.run('UPDATE users SET bio=:b, website=:w, avatar_url=:a WHERE id=:u',
+                 b=request.form.get('bio', ''), w=request.form.get('website', ''),
+                 a=request.form.get('avatar_url', ''), u=session['user_id'])
+        conn.close()
         flash('تم تحديث الملف الشخصي', 'success')
         return redirect(url_for('profile'))
-    db = get_db()
-    c = db.cursor()
-    c.execute('SELECT * FROM users WHERE id = %s', (session['user_id'],))
-    user = c.fetchone()
-    db.close()
-    return render_template('edit_profile.html', user=user)
+    conn = get_db()
+    rows = conn.run('SELECT * FROM users WHERE id = :u', u=session['user_id'])
+    conn.close()
+    user = rows[0]
+    user_dict = {'id': user[0], 'username': user[1], 'email': user[2], 'is_admin': user[4],
+                 'oauth_provider': user[5], 'bio': user[7], 'website': user[8],
+                 'avatar_url': user[9], 'created_at': user[10]}
+    return render_template('edit_profile.html', user=user_dict)
 
 @app.route('/user/<username>')
 def user_profile(username):
-    db = get_db()
-    c = db.cursor()
-    c.execute('SELECT * FROM users WHERE username = %s', (username,))
-    user = c.fetchone()
-    if not user:
-        db.close()
+    conn = get_db()
+    rows = conn.run('SELECT * FROM users WHERE username = :u', u=username)
+    if not rows:
+        conn.close()
         return render_template('404.html'), 404
-    c.execute('SELECT * FROM posts WHERE user_id = %s AND published = TRUE ORDER BY created_at DESC', (user['id'],))
-    posts = c.fetchall()
-    db.close()
-    return render_template('public_profile.html', user=user, posts=posts, posts_count=len(posts))
+    user = rows[0]
+    posts = conn.run('SELECT * FROM posts WHERE user_id = :u AND published = TRUE ORDER BY created_at DESC', u=user[0])
+    conn.close()
+    user_dict = {'id': user[0], 'username': user[1], 'email': user[2], 'is_admin': user[4],
+                 'oauth_provider': user[5], 'bio': user[7], 'website': user[8],
+                 'avatar_url': user[9], 'created_at': user[10]}
+    posts_list = [{'id': r[0], 'title': r[1], 'content': r[2], 'summary': r[3],
+                   'image_url': r[4], 'category': r[5], 'tags': r[6], 'published': r[7],
+                   'views': r[8], 'user_id': r[9], 'created_at': r[10]} for r in posts]
+    return render_template('public_profile.html', user=user_dict, posts=posts_list, posts_count=len(posts_list))
 
 @app.errorhandler(404)
 def not_found(e):
