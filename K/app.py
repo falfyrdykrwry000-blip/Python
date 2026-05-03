@@ -1,8 +1,3 @@
-"""
-نبض الحدث - مدونة عصرية مع GitHub API كقاعدة بيانات
-للرفع على Render.com
-"""
-
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from datetime import datetime, timedelta
 import os
@@ -19,9 +14,10 @@ app.secret_key = os.environ.get('SECRET_KEY', 'nubd-alhadath-secret-key-2024')
 app.permanent_session_lifetime = timedelta(days=30)
 
 # ========== إعدادات GitHub API ==========
-GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN', '')
-GITHUB_REPO = 'falfyrdykrwry000-blip/storage'
-GITHUB_API = f'https://api.github.com/repos/{GITHUB_REPO}/contents'
+GITHUB_TOKEN = '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'
+GITHUB_USER = 'falfyrdykrwry000-blip'
+GITHUB_REPO = 'storage'
+GITHUB_API = f'https://api.github.com/repos/{GITHUB_USER}/{GITHUB_REPO}/contents'
 HEADERS = {
     'Authorization': f'token {GITHUB_TOKEN}',
     'Accept': 'application/vnd.github.v3+json'
@@ -72,6 +68,7 @@ def github_save(path, data, sha=None, message='تحديث'):
         if sha:
             body['sha'] = sha
         r = requests.put(url, headers=HEADERS, json=body)
+        print(f'Save {path}: {r.status_code} - {r.text[:200]}')
         return r.status_code in [200, 201]
     except Exception as e:
         print(f'github_save error: {e}')
@@ -99,7 +96,7 @@ def save_users(users):
 def get_posts():
     """جلب جميع المقالات من مجلد posts"""
     try:
-        url = f'https://api.github.com/repos/{GITHUB_REPO}/contents/posts'
+        url = f'https://api.github.com/repos/{GITHUB_USER}/{GITHUB_REPO}/contents/posts'
         r = requests.get(url, headers=HEADERS)
         posts = []
         if r.status_code == 200:
@@ -203,7 +200,6 @@ def login_or_register_user(provider, provider_id, name, email):
             flash(f'أهلاً بك، {u["username"]}!', 'success')
             return redirect(url_for('index'))
 
-    # إنشاء مستخدم جديد
     uid = str(len(users) + 1)
     username = name or (email.split('@')[0] if email else f'{provider}_user')
     users[uid] = {
