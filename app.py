@@ -1,890 +1,555 @@
 """
-مروم FM AI - منصة ذكاء اصطناعي متكاملة
-تخزين المحادثات في localStorage للمتصفح
+نبض الحدث - مدونة عصرية مع PostgreSQL
+للرفع على Render.com
 """
 
-from flask import Flask, render_template_string, request, jsonify
-from flask_cors import CORS
+from flask import Flask, render_template, request, redirect, url_for, session, flash
+from datetime import datetime, timedelta
 import os
-import requests
-from datetime import datetime
+import markdown
+import psycopg2
+import psycopg2.extras
+from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
+from requests_oauthlib import OAuth2Session
 
-# ============================================
-# تهيئة التطبيق
-# ============================================
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'maroom-secret-key-2026')
-CORS(app)
+app.secret_key = os.environ.get('SECRET_KEY', 'nubd-alhadath-secret-key-2024')
+app.permanent_session_lifetime = timedelta(days=30)
 
-# إعدادات Groq API
-GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
-GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+# ========== قاعدة البيانات ==========
+DATABASE_URL = os.environ.get('DATABASE_URL', '')
 
-# ============================================
-# الدوال المساعدة
-# ============================================
+def get_db():
+    conn = psycopg2.connect(DATABASE_URL)
+    conn.cursor_factory = psycopg2.extras.RealDictCursor
+    return conn
 
-def chat_with_groq(message, model="llama-3.3-70b-versatile"):
-    """الاتصال بـ Groq API"""
-    if not GROQ_API_KEY or not GROQ_API_KEY.startswith('gsk_'):
-        return "⚠️ مفتاح Groq غير مضبوط"
-    
-    headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
-    data = {
-        "model": model,
-        "messages": [{"role": "user", "content": message}],
-        "temperature": 0.7,
-        "max_tokens": 1024
-    }
-    
-    try:
-        response = requests.post(GROQ_API_URL, headers=headers, json=data, timeout=30)
-        if response.status_code == 200:
-            return response.json()['choices'][0]['message']['content']
-        return f"⚠️ خطأ: {response.status_code}"
-    except Exception as e:
-        return f"⚠️ خطأ: {str(e)[:100]}"
+def init_db():
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS posts (
+            id SERIAL PRIMARY KEY,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            summary TEXT DEFAULT '',
+            image_url TEXT DEFAULT '',
+            category TEXT DEFAULT 'عام',
+            tags TEXT DEFAULT '',
+            published BOOLEAN DEFAULT TRUE,
+            views INTEGER DEFAULT 0,
+            user_id INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username TEXT UNIQUE NOT NULL,
+            email TEXT DEFAULT '',
+            password_hash TEXT DEFAULT '',
+            is_admin BOOLEAN DEFAULT FALSE,
+            oauth_provider TEXT DEFAULT '',
+            oauth_provider_id TEXT DEFAULT '',
+            bio TEXT DEFAULT '',
+            website TEXT DEFAULT '',
+            avatar_url TEXT DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS comments (
+            id SERIAL PRIMARY KEY,
+            post_id INTEGER,
+            author TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS likes (
+            id SERIAL PRIMARY KEY,
+            post_id INTEGER,
+            user_id INTEGER,
+            ip_address TEXT DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    c.execute("SELECT * FROM users WHERE username='admin'")
+    if not c.fetchone():
+        c.execute("INSERT INTO users (username, email, password_hash, is_admin, bio) VALUES (%s, %s, %s, %s, %s)",
+                 ('admin', 'admin@example.com', generate_password_hash('admin123'), True, 'مدير المدونة'))
+    conn.commit()
+    conn.close()
 
-# ============================================
-# إدارة مفاتيح API للتطبيقات الخارجية
-# ============================================
+# ========== OAuth ==========
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
+GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
+GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
+GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v1/userinfo'
+GOOGLE_SCOPE = ['openid', 'email', 'profile']
 
-ALLOWED_APPS = {
-    "android_app": {
-        "api_key": "maroom_android_2026_secret_key_1",
-        "name": "📱 تطبيق أندرويد مروم FM",
-        "rate_limit": 1000
-    },
-    "web_app": {
-        "api_key": "maroom_web_2026_secret_key_2", 
-        "name": "💻 موقع مروم FM",
-        "rate_limit": 500
-    },
-    "test_app": {
-        "api_key": "maroom_test_2026_secret_key_3",
-        "name": "🧪 تطبيق تجريبي",
-        "rate_limit": 100
-    }
-}
+GITHUB_CLIENT_ID = os.environ.get('GITHUB_CLIENT_ID')
+GITHUB_CLIENT_SECRET = os.environ.get('GITHUB_CLIENT_SECRET')
+GITHUB_AUTH_URL = 'https://github.com/login/oauth/authorize'
+GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token'
+GITHUB_USERINFO_URL = 'https://api.github.com/user'
+GITHUB_SCOPE = ['user:email']
 
-request_counts = {}
-
-def verify_api_key(api_key):
-    for app_id, app_data in ALLOWED_APPS.items():
-        if app_data["api_key"] == api_key:
-            return app_id, app_data
-    return None, None
-
-def check_rate_limit(app_id, api_key):
-    current_hour = datetime.now().strftime("%Y-%m-%d-%H")
-    key = f"{app_id}:{api_key}:{current_hour}"
-    
-    if key not in request_counts:
-        request_counts[key] = 0
-    
-    limit = ALLOWED_APPS[app_id]["rate_limit"]
-    
-    if request_counts[key] >= limit:
-        return False, limit
-    
-    request_counts[key] += 1
-    return True, limit
-
-def api_required(f):
+# ========== الديكوريتور ==========
+def login_required(f):
     @wraps(f)
-    def decorated(*args, **kwargs):
-        api_key = request.headers.get('X-API-Key')
-        
-        if not api_key:
-            return jsonify({"error": "مطلوب مفتاح API"}), 401
-        
-        app_id, app_data = verify_api_key(api_key)
-        
-        if not app_id:
-            return jsonify({"error": "مفتاح API غير صالح"}), 401
-        
-        allowed, limit = check_rate_limit(app_id, api_key)
-        if not allowed:
-            return jsonify({"error": "تم تجاوز حد الطلبات", "limit": limit}), 429
-        
-        request.app_info = app_data
-        request.app_id = app_id
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('يرجى تسجيل الدخول أولاً', 'warning')
+            return redirect(url_for('login'))
         return f(*args, **kwargs)
-    return decorated
+    return decorated_function
 
-# ============================================
-# قالب HTML الرئيسي
-# ============================================
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('يرجى تسجيل الدخول أولاً', 'warning')
+            return redirect(url_for('login'))
+        if not session.get('is_admin'):
+            flash('هذه الصفحة مخصصة للمشرفين فقط', 'danger')
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated_function
 
-MAIN_TEMPLATE = '''
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مروم FM AI - ذكاء اصطناعي متقدم</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        :root {
-            --bg: #0a0a2a;
-            --card: #1a1a3a;
-            --text: #fff;
-            --text-sec: #aaa;
-            --primary: #ff6b00;
-            --secondary: #ff2b7a;
-            --input: #0f0f2a;
-        }
-        
-        [data-theme="light"] {
-            --bg: #f0f2f5;
-            --card: #ffffff;
-            --text: #1a1a2e;
-            --text-sec: #666;
-            --primary: #ff6b00;
-            --secondary: #ff2b7a;
-            --input: #e8e8ec;
-        }
-        
-        body {
-            font-family: 'Cairo', 'Segoe UI', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-        }
-        
-        .navbar {
-            background: var(--card);
-            padding: 0.8rem 1.5rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid var(--primary);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        
-        .logo {
-            font-size: 1.3rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-        
-        .menu-btn {
-            background: none;
-            border: none;
-            font-size: 1.8rem;
-            cursor: pointer;
-            color: var(--text);
-        }
-        
-        .sidebar {
-            position: fixed;
-            top: 0;
-            right: -280px;
-            width: 280px;
-            height: 100%;
-            background: var(--card);
-            z-index: 1000;
-            transition: 0.3s;
-            padding: 1.5rem;
-            overflow-y: auto;
-            box-shadow: -5px 0 20px rgba(0,0,0,0.3);
-        }
-        
-        .sidebar.open { right: 0; }
-        
-        .sidebar-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid var(--primary);
-        }
-        
-        .close-menu {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: var(--text);
-        }
-        
-        .sidebar-section {
-            margin-bottom: 1.8rem;
-        }
-        
-        .sidebar-section h3 {
-            color: var(--primary);
-            margin-bottom: 0.8rem;
-            font-size: 1rem;
-        }
-        
-        .sidebar-item {
-            display: flex;
-            align-items: center;
-            gap: 0.8rem;
-            padding: 0.7rem;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-        
-        .sidebar-item:hover {
-            background: rgba(255, 107, 0, 0.2);
-        }
-        
-        .theme-toggle {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.7rem;
-            background: var(--input);
-            border-radius: 40px;
-            cursor: pointer;
-        }
-        
-        .overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 999;
-            display: none;
-        }
-        
-        .overlay.active { display: block; }
-        
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 1.5rem;
-        }
-        
-        .card {
-            background: var(--card);
-            border-radius: 24px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            border: 1px solid rgba(255, 107, 0, 0.3);
-        }
-        
-        .card h2 {
-            color: var(--primary);
-            margin-bottom: 1rem;
-            font-size: 1.3rem;
-        }
-        
-        .chat-container {
-            display: flex;
-            flex-direction: column;
-            height: 500px;
-        }
-        
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 1rem;
-            background: var(--input);
-            border-radius: 20px;
-            margin-bottom: 1rem;
-        }
-        
-        .message {
-            margin-bottom: 1rem;
-            padding: 0.8rem 1rem;
-            border-radius: 18px;
-            max-width: 85%;
-            animation: fadeIn 0.3s;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .message.user {
-            background: linear-gradient(135deg, var(--primary)22, var(--secondary)22);
-            border-right: 3px solid var(--primary);
-            margin-right: auto;
-            text-align: right;
-        }
-        
-        .message.assistant {
-            background: rgba(255, 255, 255, 0.05);
-            border-left: 3px solid var(--secondary);
-            margin-left: auto;
-            text-align: left;
-        }
-        
-        .message-time {
-            font-size: 0.7rem;
-            color: var(--text-sec);
-            margin-top: 0.3rem;
-        }
-        
-        .chat-input {
-            display: flex;
-            gap: 0.8rem;
-        }
-        
-        .chat-input textarea {
-            flex: 1;
-            padding: 0.8rem;
-            border: 1px solid rgba(255, 107, 0, 0.3);
-            border-radius: 20px;
-            background: var(--input);
-            color: var(--text);
-            resize: none;
-            font-family: inherit;
-        }
-        
-        .chat-input textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-        
-        .chat-input button {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border: none;
-            border-radius: 20px;
-            padding: 0 1.5rem;
-            cursor: pointer;
-            font-weight: bold;
-            color: white;
-            transition: transform 0.2s;
-        }
-        
-        .chat-input button:hover {
-            transform: scale(1.02);
-        }
-        
-        .history-item {
-            background: var(--input);
-            padding: 0.8rem;
-            border-radius: 12px;
-            margin-bottom: 0.5rem;
-            border-right: 2px solid var(--primary);
-        }
-        
-        .history-question {
-            color: var(--primary);
-            font-weight: bold;
-            font-size: 0.85rem;
-        }
-        
-        .history-answer {
-            color: var(--text-sec);
-            margin-top: 0.3rem;
-            font-size: 0.8rem;
-        }
-        
-        .history-time {
-            font-size: 0.6rem;
-            color: #555;
-            margin-top: 0.3rem;
-        }
-        
-        .footer {
-            text-align: center;
-            padding: 1rem;
-            color: var(--text-sec);
-            font-size: 0.7rem;
-        }
-        
-        @media (max-width: 768px) {
-            .container { padding: 1rem; }
-            .message { max-width: 95%; }
-        }
-        
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-track { background: var(--input); }
-        ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
-        
-        .clear-btn {
-            background: rgba(220, 53, 69, 0.8);
-            border: none;
-            border-radius: 8px;
-            padding: 0.3rem 0.8rem;
-            color: white;
-            cursor: pointer;
-            font-size: 0.7rem;
-            margin-right: 0.5rem;
-        }
-        
-        .clear-btn:hover { background: #dc3545; }
-    </style>
-</head>
-<body>
-    <div class="overlay" id="overlay"></div>
-    
-    <nav class="navbar">
-        <button class="menu-btn" id="menuBtn">☰</button>
-        <div class="logo">🎙️ مروم FM AI</div>
-        <div style="width: 40px;"></div>
-    </nav>
-    
-    <div class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <h3>⚙️ القائمة</h3>
-            <button class="close-menu" id="closeMenu">✕</button>
-        </div>
-        
-        <div class="sidebar-section">
-            <h3>🎨 المظهر</h3>
-            <div class="theme-toggle" id="themeToggle">
-                <span>🌙 ليلي</span>
-                <span>☀️ نهاري</span>
-            </div>
-        </div>
-        
-        <div class="sidebar-section">
-            <h3>📱 أقسام التطبيق</h3>
-            <div class="sidebar-item" onclick="showTab('chat')">
-                <span>💬</span> <span>المحادثة</span>
-            </div>
-            <div class="sidebar-item" onclick="showTab('history')">
-                <span>📜</span> <span>سجل المحادثات</span>
-            </div>
-            <div class="sidebar-item" onclick="window.open('/api/docs', '_blank')">
-                <span>🔌</span> <span>توثيق API</span>
-            </div>
-        </div>
-        
-        <div class="sidebar-section">
-            <h3>⚡ إعدادات</h3>
-            <div class="sidebar-item" onclick="clearAllHistory()">
-                <span>🗑️</span> <span>مسح كل المحادثات</span>
-            </div>
-            <div class="sidebar-item" onclick="window.location.reload()">
-                <span>🔄</span> <span>تحديث الصفحة</span>
-            </div>
-        </div>
-        
-        <div class="sidebar-section">
-            <h3>ℹ️ معلومات</h3>
-            <div class="sidebar-item">
-                <span>🎙️</span> <span>مروم FM AI v3.0</span>
-            </div>
-            <div class="sidebar-item">
-                <span>💾</span> <span>التخزين: محلي</span>
-            </div>
-        </div>
-    </div>
-    
-    <div class="container">
-        <!-- تبويب المحادثة -->
-        <div id="chatTab" class="tab-content">
-            <div class="card">
-                <h2>💬 محادثة ذكية مع مروم FM AI</h2>
-                <div class="chat-container">
-                    <div class="chat-messages" id="chatMessages"></div>
-                    <div class="chat-input">
-                        <textarea id="messageInput" rows="2" placeholder="اكتب رسالتك هنا..."></textarea>
-                        <button onclick="sendMessage()">إرسال ➤</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- تبويب سجل المحادثات -->
-        <div id="historyTab" class="tab-content" style="display:none;">
-            <div class="card">
-                <h2>📜 سجل المحادثات <button class="clear-btn" onclick="clearAllHistory()">مسح الكل</button></h2>
-                <div id="historyList"></div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="footer">
-        <p>© 2026 مروم FM AI - جميع الحقوق محفوظة | مدعوم من Groq AI | التخزين في متصفحك</p>
-    </div>
-    
-    <script>
-        // ============================================
-        // إدارة التخزين المحلي (localStorage)
-        // ============================================
-        
-        const STORAGE_KEY = 'maroom_chat_history';
-        
-        function getSessionId() {
-            let sessionId = localStorage.getItem('maroom_session_id');
-            if (!sessionId) {
-                sessionId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
-                localStorage.setItem('maroom_session_id', sessionId);
-            }
-            return sessionId;
-        }
-        
-        function getHistory() {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            if (stored) {
-                return JSON.parse(stored);
-            }
-            return [];
-        }
-        
-        function saveHistory(history) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-        }
-        
-        function addMessageToHistory(role, content) {
-            const history = getHistory();
-            history.push({
-                role: role,
-                content: content,
-                time: new Date().toISOString()
-            });
-            saveHistory(history);
-            
-            // تحديث واجهة السجل إذا كانت مفتوحة
-            if (document.getElementById('historyTab').style.display !== 'none') {
-                displayHistory();
-            }
-        }
-        
-        function clearAllHistory() {
-            if (confirm('⚠️ هل أنت متأكد من مسح كل المحادثات؟ لا يمكن التراجع.')) {
-                localStorage.removeItem(STORAGE_KEY);
-                displayMessages();
-                displayHistory();
-                if (document.getElementById('historyTab').style.display !== 'none') {
-                    document.getElementById('historyList').innerHTML = '<p style="text-align:center;color:#888;">📭 لا توجد محادثات سابقة</p>';
-                }
-            }
-        }
-        
-        function displayMessages() {
-            const history = getHistory();
-            const container = document.getElementById('chatMessages');
-            
-            if (history.length === 0) {
-                container.innerHTML = '<div class="message assistant"><strong>🎙️ مروم FM AI</strong><p>مرحباً بك! أنا مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟</p><div class="message-time">الآن</div></div>';
-                return;
-            }
-            
-            container.innerHTML = history.map(msg => `
-                <div class="message ${msg.role}">
-                    <strong>${msg.role === 'user' ? '👤 أنت' : '🎙️ مروم FM AI'}</strong>
-                    <p>${escapeHtml(msg.content)}</p>
-                    <div class="message-time">${formatTime(msg.time)}</div>
-                </div>
-            `).join('');
-            
-            container.scrollTop = container.scrollHeight;
-        }
-        
-        function displayHistory() {
-            const history = getHistory();
-            const container = document.getElementById('historyList');
-            
-            if (history.length === 0) {
-                container.innerHTML = '<p style="text-align:center;color:#888;">📭 لا توجد محادثات سابقة</p>';
-                return;
-            }
-            
-            // عرض المحادثات مجمعة (سؤال + جواب)
-            const grouped = [];
-            for (let i = 0; i < history.length; i += 2) {
-                if (history[i].role === 'user') {
-                    grouped.push({
-                        question: history[i],
-                        answer: history[i + 1] || null
-                    });
-                }
-            }
-            
-            container.innerHTML = grouped.map(g => `
-                <div class="history-item">
-                    <div class="history-question">👤 ${escapeHtml(g.question.content)}</div>
-                    ${g.answer ? `<div class="history-answer">🎙️ ${escapeHtml(g.answer.content)}</div>` : ''}
-                    <div class="history-time">${formatTime(g.question.time)}</div>
-                </div>
-            `).join('');
-        }
-        
-        function formatTime(isoString) {
-            if (!isoString) return 'الآن';
-            const date = new Date(isoString);
-            return date.toLocaleString('ar-SA', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
-        }
-        
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-        
-        // ============================================
-        // دوال المحادثة
-        // ============================================
-        
-        async function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const message = input.value.trim();
-            if (!message) return;
-            
-            // إضافة رسالة المستخدم للواجهة والتاريخ
-            addMessageToHistory('user', message);
-            displayMessages();
-            
-            input.value = '';
-            
-            // إظهار مؤشر التحميل
-            const container = document.getElementById('chatMessages');
-            const loadingId = 'loading_' + Date.now();
-            container.innerHTML += `
-                <div class="message assistant" id="${loadingId}">
-                    <strong>🎙️ مروم FM AI</strong>
-                    <p>🤔 جاري التفكير مع Groq...</p>
-                    <div class="message-time">الآن</div>
-                </div>
-            `;
-            container.scrollTop = container.scrollHeight;
-            
-            try {
-                const sessionId = getSessionId();
-                const response = await fetch('/chat/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: message, sessionId: sessionId })
-                });
-                const data = await response.json();
-                
-                // إزالة مؤشر التحميل
-                document.getElementById(loadingId)?.remove();
-                
-                // إضافة رد الذكاء للواجهة والتاريخ
-                addMessageToHistory('assistant', data.reply);
-                displayMessages();
-                
-            } catch (error) {
-                document.getElementById(loadingId)?.remove();
-                addMessageToHistory('assistant', '❌ عذراً، حدث خطأ تقني. حاول مرة أخرى.');
-                displayMessages();
-            }
-        }
-        
-        function showTab(tab) {
-            document.getElementById('chatTab').style.display = 'none';
-            document.getElementById('historyTab').style.display = 'none';
-            
-            if (tab === 'chat') {
-                document.getElementById('chatTab').style.display = 'block';
-                displayMessages();
-            }
-            if (tab === 'history') {
-                document.getElementById('historyTab').style.display = 'block';
-                displayHistory();
-            }
-            closeSidebar();
-        }
-        
-        // ============================================
-        // القائمة الجانبية
-        // ============================================
-        
-        const menuBtn = document.getElementById('menuBtn');
-        const sidebar = document.getElementById('sidebar');
-        const closeMenu = document.getElementById('closeMenu');
-        const overlay = document.getElementById('overlay');
-        
-        function openSidebar() { sidebar.classList.add('open'); overlay.classList.add('active'); }
-        function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('active'); }
-        
-        menuBtn.onclick = openSidebar;
-        closeMenu.onclick = closeSidebar;
-        overlay.onclick = closeSidebar;
-        
-        // ============================================
-        // الوضع الليلي والنهاري
-        // ============================================
-        
-        const themeToggle = document.getElementById('themeToggle');
-        if (localStorage.getItem('theme') === 'light') {
-            document.documentElement.setAttribute('data-theme', 'light');
-        }
-        
-        themeToggle.onclick = () => {
-            const current = document.documentElement.getAttribute('data-theme');
-            const newTheme = current === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-        };
-        
-        // ============================================
-        // إرسال بالضغط على Enter
-        // ============================================
-        
-        document.getElementById('messageInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-        
-        // ============================================
-        // التحميل الأولي
-        // ============================================
-        
-        displayMessages();
-    </script>
-</body>
-</html>
-'''
+def login_or_register_user(provider, provider_id, name, email):
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT * FROM users WHERE oauth_provider = %s AND oauth_provider_id = %s", (provider, provider_id))
+    user = c.fetchone()
+    if not user:
+        username = name or (email.split('@')[0] if email else provider + '_user')
+        counter = 1
+        original_username = username
+        while True:
+            c.execute("SELECT id FROM users WHERE username = %s", (username,))
+            if not c.fetchone():
+                break
+            username = f"{original_username}{counter}"
+            counter += 1
+        c.execute("INSERT INTO users (username, email, password_hash, oauth_provider, oauth_provider_id) VALUES (%s, %s, %s, %s, %s) RETURNING *",
+                 (username, email, generate_password_hash(provider + str(provider_id)), provider, provider_id))
+        db.commit()
+        user = c.fetchone()
+    if user:
+        session.permanent = True
+        session['user_id'] = user['id']
+        session['username'] = user['username']
+        session['is_admin'] = user['is_admin']
+        flash(f'أهلاً بك، {user["username"]}!', 'success')
+        db.close()
+        return redirect(url_for('index'))
+    db.close()
+    return redirect(url_for('login'))
 
-# ============================================
-# المسارات الأساسية
-# ============================================
+# ========== OAuth Routes ==========
+@app.route('/login/google')
+def google_login():
+    if not GOOGLE_CLIENT_ID:
+        flash('تسجيل Google غير مفعل', 'warning')
+        return redirect(url_for('login'))
+    google = OAuth2Session(GOOGLE_CLIENT_ID, scope=GOOGLE_SCOPE,
+                          redirect_uri=url_for('google_callback', _external=True))
+    auth_url, state = google.authorization_url(GOOGLE_AUTH_URL, access_type="offline", prompt="select_account")
+    session['oauth_state'] = state
+    return redirect(auth_url)
 
+@app.route('/login/google/callback')
+def google_callback():
+    google = OAuth2Session(GOOGLE_CLIENT_ID, state=session.get('oauth_state'),
+                          redirect_uri=url_for('google_callback', _external=True))
+    try:
+        token = google.fetch_token(GOOGLE_TOKEN_URL, client_secret=GOOGLE_CLIENT_SECRET,
+                                  authorization_response=request.url)
+        user_info = google.get(GOOGLE_USERINFO_URL).json()
+        return login_or_register_user('google', user_info['id'], user_info.get('name'), user_info.get('email'))
+    except:
+        flash('فشل تسجيل الدخول بـ Google', 'danger')
+        return redirect(url_for('login'))
+
+@app.route('/login/github')
+def github_login():
+    if not GITHUB_CLIENT_ID:
+        flash('تسجيل GitHub غير مفعل', 'warning')
+        return redirect(url_for('login'))
+    github = OAuth2Session(GITHUB_CLIENT_ID, scope=GITHUB_SCOPE,
+                          redirect_uri=url_for('github_callback', _external=True))
+    auth_url, state = github.authorization_url(GITHUB_AUTH_URL)
+    session['oauth_state'] = state
+    return redirect(auth_url)
+
+@app.route('/login/github/callback')
+def github_callback():
+    github = OAuth2Session(GITHUB_CLIENT_ID, state=session.get('oauth_state'),
+                          redirect_uri=url_for('github_callback', _external=True))
+    try:
+        token = github.fetch_token(GITHUB_TOKEN_URL, client_secret=GITHUB_CLIENT_SECRET,
+                                  authorization_response=request.url)
+        user_info = github.get(GITHUB_USERINFO_URL).json()
+        email = user_info.get('email')
+        if not email:
+            emails_resp = github.get('https://api.github.com/user/emails').json()
+            email = next((e['email'] for e in emails_resp if e.get('primary')), None)
+        return login_or_register_user('github', str(user_info['id']),
+                                     user_info.get('name') or user_info.get('login'), email)
+    except:
+        flash('فشل تسجيل الدخول بـ GitHub', 'danger')
+        return redirect(url_for('login'))
+
+# ========== الصفحة الرئيسية ==========
 @app.route('/')
 def index():
-    return render_template_string(MAIN_TEMPLATE)
+    db = get_db()
+    c = db.cursor()
+    c.execute('''
+        SELECT p.*, u.username as author_name, u.is_admin as author_is_admin,
+               (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count,
+               (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count
+        FROM posts p LEFT JOIN users u ON p.user_id = u.id
+        WHERE p.published = TRUE ORDER BY p.created_at DESC
+    ''')
+    posts = c.fetchall()
+    c.execute('SELECT DISTINCT category FROM posts WHERE published = TRUE')
+    categories = c.fetchall()
+    db.close()
+    return render_template('index.html', posts=posts, categories=categories)
 
-@app.route('/chat/send', methods=['POST'])
-def chat_send():
-    data = request.get_json()
-    message = data.get('message', '')
-    session_id = data.get('sessionId', 'default')
-    
-    if not message:
-        return jsonify({"reply": "الرجاء كتابة رسالة"}), 200
-    
-    reply = chat_with_groq(message)
-    return jsonify({"reply": reply})
+# ========== عرض مقال ==========
+@app.route('/post/<int:post_id>')
+def view_post(post_id):
+    db = get_db()
+    c = db.cursor()
+    c.execute('''
+        SELECT p.*, u.username as author_name, u.is_admin as author_is_admin, u.avatar_url as author_avatar,
+               (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count
+        FROM posts p LEFT JOIN users u ON p.user_id = u.id
+        WHERE p.id = %s AND p.published = TRUE
+    ''', (post_id,))
+    post = c.fetchone()
+    if not post:
+        db.close()
+        flash('المقال غير موجود', 'danger')
+        return redirect(url_for('index'))
+    c.execute('UPDATE posts SET views = views + 1 WHERE id = %s', (post_id,))
+    c.execute('SELECT * FROM comments WHERE post_id = %s ORDER BY created_at DESC', (post_id,))
+    comments = c.fetchall()
+    user_id = session.get('user_id')
+    liked = None
+    if user_id:
+        c.execute('SELECT id FROM likes WHERE post_id = %s AND user_id = %s', (post_id, user_id))
+        liked = c.fetchone()
+    c.execute('SELECT * FROM posts WHERE category = %s AND id != %s AND published = TRUE LIMIT 3',
+              (post['category'], post_id))
+    related = c.fetchall()
+    db.commit()
+    db.close()
+    content_html = markdown.markdown(post['content'], extensions=['fenced_code', 'tables', 'codehilite'])
+    return render_template('post.html', post=post, comments=comments,
+                          content_html=content_html, liked=liked is not None, related=related)
 
-@app.route('/health')
-def health():
-    return jsonify({"status": "ok", "service": "مروم FM AI", "storage": "localStorage"}), 200
+# ========== تصنيفات ==========
+@app.route('/category/<category>')
+def category_posts(category):
+    db = get_db()
+    c = db.cursor()
+    c.execute('''
+        SELECT p.*, u.username as author_name, u.is_admin as author_is_admin
+        FROM posts p LEFT JOIN users u ON p.user_id = u.id
+        WHERE p.category = %s AND p.published = TRUE ORDER BY p.created_at DESC
+    ''', (category,))
+    posts = c.fetchall()
+    db.close()
+    return render_template('index.html', posts=posts, current_category=category)
 
-# ============================================
-# نقاط API للتطبيقات الخارجية
-# ============================================
+# ========== بحث ==========
+@app.route('/search')
+def search():
+    query = request.args.get('q', '')
+    if query:
+        db = get_db()
+        c = db.cursor()
+        c.execute('''
+            SELECT p.*, u.username as author_name, u.is_admin as author_is_admin
+            FROM posts p LEFT JOIN users u ON p.user_id = u.id
+            WHERE p.published = TRUE AND (p.title ILIKE %s OR p.content ILIKE %s OR p.tags ILIKE %s)
+            ORDER BY p.created_at DESC
+        ''', (f'%{query}%', f'%{query}%', f'%{query}%'))
+        posts = c.fetchall()
+        db.close()
+    else:
+        posts = []
+    return render_template('index.html', posts=posts, search_query=query)
 
-@app.route('/api/v1/chat', methods=['POST'])
-@api_required
-def api_v1_chat():
-    data = request.get_json()
-    message = data.get('message', '')
-    session_id = data.get('session_id', f"api_{request.app_id}_{datetime.now().timestamp()}")
-    
-    if not message:
-        return jsonify({"error": "الرسالة مطلوبة"}), 400
-    
-    reply = chat_with_groq(message)
-    
-    return jsonify({
-        "success": True,
-        "reply": reply,
-        "session_id": session_id,
-        "app": request.app_info['name'],
-        "timestamp": datetime.now().isoformat()
-    })
+# ========== تعليقات ==========
+@app.route('/post/<int:post_id>/comment', methods=['POST'])
+@login_required
+def add_comment(post_id):
+    content = request.form.get('content', '')
+    if not content.strip():
+        flash('الرجاء كتابة تعليق', 'warning')
+        return redirect(url_for('view_post', post_id=post_id))
+    db = get_db()
+    c = db.cursor()
+    c.execute('INSERT INTO comments (post_id, author, content) VALUES (%s, %s, %s)',
+              (post_id, session.get('username', 'زائر'), content))
+    db.commit()
+    db.close()
+    flash('تم إضافة التعليق بنجاح', 'success')
+    return redirect(url_for('view_post', post_id=post_id))
 
-@app.route('/api/v1/health', methods=['GET'])
-@api_required
-def api_v1_health():
-    return jsonify({
-        "status": "healthy",
-        "service": "مروم FM AI",
-        "version": "3.0.0",
-        "app": request.app_info['name'],
-        "timestamp": datetime.now().isoformat()
-    })
+# ========== إعجاب ==========
+@app.route('/like/<int:post_id>', methods=['POST'])
+@login_required
+def like_post(post_id):
+    user_id = session['user_id']
+    db = get_db()
+    c = db.cursor()
+    c.execute('SELECT id FROM likes WHERE post_id = %s AND user_id = %s', (post_id, user_id))
+    existing = c.fetchone()
+    if existing:
+        c.execute('DELETE FROM likes WHERE id = %s', (existing['id'],))
+        liked = False
+    else:
+        c.execute('INSERT INTO likes (post_id, user_id, ip_address) VALUES (%s, %s, %s)',
+                  (post_id, user_id, request.remote_addr))
+        liked = True
+    db.commit()
+    c.execute('SELECT COUNT(*) as c FROM likes WHERE post_id = %s', (post_id,))
+    count = c.fetchone()['c']
+    db.close()
+    return {'success': True, 'liked': liked, 'count': count}
 
-@app.route('/api/docs')
-def api_docs():
-    docs_html = '''
-    <!DOCTYPE html>
-    <html dir="rtl">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>مروم FM AI - توثيق API</title>
-        <style>
-            body { font-family: 'Cairo', sans-serif; background: #0a0a2a; color: #fff; padding: 2rem; }
-            .container { max-width: 900px; margin: 0 auto; }
-            .card { background: #1a1a3a; border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; border-right: 4px solid #ff6b00; }
-            h1 { color: #ff6b00; }
-            h2 { color: #ff2b7a; font-size: 1.2rem; margin-top: 1rem; }
-            code { background: #0f0f2a; padding: 0.2rem 0.5rem; border-radius: 8px; font-family: monospace; }
-            pre { background: #0f0f2a; padding: 1rem; border-radius: 12px; overflow-x: auto; }
-            .badge { display: inline-block; background: #28a745; padding: 0.2rem 0.8rem; border-radius: 20px; font-size: 0.7rem; margin-left: 0.5rem; }
-            .badge-post { background: #007bff; }
-            .badge-get { background: #28a745; }
-            .badge-delete { background: #dc3545; }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1>🔌 مروم FM AI - توثيق API</h1>
-            <p>لربط تطبيقات APK والمواقع مع خادم مروم FM AI</p>
-            
-            <div class="card">
-                <h2>🔑 الحصول على مفتاح API</h2>
-                <p>المفاتيح المتاحة حالياً:</p>
-                <ul>
-                    <li><strong>تطبيق أندرويد</strong>: <code>maroom_android_2026_secret_key_1</code></li>
-                    <li><strong>موقع الويب</strong>: <code>maroom_web_2026_secret_key_2</code></li>
-                    <li><strong>تطبيق تجريبي</strong>: <code>maroom_test_2026_secret_key_3</code></li>
-                </ul>
-            </div>
-            
-            <div class="card">
-                <h2>📡 نقاط النهاية</h2>
-                
-                <h3><span class="badge badge-post">POST</span> /api/v1/chat</h3>
-                <p>إرسال رسالة والحصول على رد من الذكاء الاصطناعي.</p>
-                <pre>{
-  "message": "مرحباً",
-  "session_id": "user_123"
-}</pre>
-                
-                <h3><span class="badge badge-get">GET</span> /api/v1/health</h3>
-                <p>فحص صحة الخادم.</p>
-                
-                <h3><span class="badge badge-get">GET</span> /api/docs</h3>
-                <p>هذه الصفحة.</p>
-            </div>
-            
-            <div class="card">
-                <h2>🐍 مثال باستخدام Python</h2>
-                <pre>
-import requests
+# ========== تسجيل الدخول ==========
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        db = get_db()
+        c = db.cursor()
+        c.execute('SELECT * FROM users WHERE username = %s', (username,))
+        user = c.fetchone()
+        db.close()
+        if user and user['password_hash'] and check_password_hash(user['password_hash'], password):
+            session.permanent = True
+            session['user_id'] = user['id']
+            session['username'] = user['username']
+            session['is_admin'] = user['is_admin']
+            flash(f'مرحباً بك، {username}!', 'success')
+            return redirect(url_for('admin' if user['is_admin'] else 'index'))
+        flash('اسم المستخدم أو كلمة المرور غير صحيحة', 'danger')
+    return render_template('login.html')
 
-url = "https://kruri.qzz.io/api/v1/chat"
-headers = {"X-API-Key": "maroom_android_2026_secret_key_1"}
-data = {"message": "ما هو الذكاء الاصطناعي?"}
+# ========== تسجيل ==========
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        email = request.form.get('email', '')
+        db = get_db()
+        c = db.cursor()
+        c.execute('SELECT id FROM users WHERE username = %s', (username,))
+        if c.fetchone():
+            db.close()
+            flash('اسم المستخدم موجود بالفعل', 'danger')
+            return render_template('register.html')
+        c.execute('INSERT INTO users (username, email, password_hash) VALUES (%s, %s, %s) RETURNING *',
+                  (username, email, generate_password_hash(password)))
+        db.commit()
+        user = c.fetchone()
+        db.close()
+        session.permanent = True
+        session['user_id'] = user['id']
+        session['username'] = user['username']
+        session['is_admin'] = user['is_admin']
+        flash('تم إنشاء الحساب بنجاح!', 'success')
+        return redirect(url_for('index'))
+    return render_template('register.html')
 
-response = requests.post(url, json=data, headers=headers)
-print(response.json())
-                </pre>
-            </div>
-        </div>
-    </body>
-    </html>
-    '''
-    return docs_html
+# ========== تسجيل الخروج ==========
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('تم تسجيل الخروج', 'success')
+    return redirect(url_for('index'))
 
-# ============================================
-# التشغيل
-# ============================================
+# ========== لوحة تحكم ==========
+@app.route('/admin')
+@admin_required
+def admin():
+    db = get_db()
+    c = db.cursor()
+    c.execute('''
+        SELECT p.*, u.username as author_name
+        FROM posts p LEFT JOIN users u ON p.user_id = u.id
+        ORDER BY p.created_at DESC
+    ''')
+    posts = c.fetchall()
+    c.execute('SELECT COUNT(*) as c FROM users')
+    total_users = c.fetchone()['c']
+    c.execute('SELECT COUNT(*) as c FROM comments')
+    total_comments = c.fetchone()['c']
+    c.execute('SELECT COUNT(*) as c FROM likes')
+    total_likes = c.fetchone()['c']
+    db.close()
+    return render_template('admin.html', posts=posts, total_posts=len(posts),
+                          total_users=total_users, total_comments=total_comments, total_likes=total_likes)
+
+# ========== مقال جديد ==========
+@app.route('/new-post', methods=['GET', 'POST'])
+@login_required
+def new_post():
+    if request.method == 'POST':
+        db = get_db()
+        c = db.cursor()
+        c.execute('''INSERT INTO posts (title, content, summary, image_url, category, tags, user_id)
+                     VALUES (%s, %s, %s, %s, %s, %s, %s)''',
+                  (request.form['title'], request.form['content'], request.form.get('summary', ''),
+                   request.form.get('image_url', ''), request.form.get('category', 'عام'),
+                   request.form.get('tags', ''), session['user_id']))
+        db.commit()
+        db.close()
+        flash('تم نشر المقال بنجاح!', 'success')
+        return redirect(url_for('my_posts'))
+    return render_template('new_post.html')
+
+# ========== منشوراتي ==========
+@app.route('/my-posts')
+@login_required
+def my_posts():
+    db = get_db()
+    c = db.cursor()
+    c.execute('''
+        SELECT p.*, u.username as author_name,
+               (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count,
+               (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count
+        FROM posts p LEFT JOIN users u ON p.user_id = u.id
+        WHERE p.user_id = %s ORDER BY p.created_at DESC
+    ''', (session['user_id'],))
+    posts = c.fetchall()
+    db.close()
+    return render_template('my_posts.html', posts=posts)
+
+# ========== تعديل مقال ==========
+@app.route('/edit-post/<int:post_id>', methods=['GET', 'POST'])
+@login_required
+def edit_post(post_id):
+    db = get_db()
+    c = db.cursor()
+    c.execute('SELECT * FROM posts WHERE id = %s', (post_id,))
+    post = c.fetchone()
+    if not post:
+        db.close()
+        flash('المقال غير موجود', 'danger')
+        return redirect(url_for('index'))
+    if post['user_id'] != session['user_id'] and not session.get('is_admin'):
+        db.close()
+        flash('لا تملك صلاحية تعديل هذا المقال', 'danger')
+        return redirect(url_for('index'))
+    if request.method == 'POST':
+        c.execute('''UPDATE posts SET title=%s, content=%s, summary=%s, image_url=%s, category=%s, tags=%s, published=%s
+                     WHERE id=%s''',
+                  (request.form['title'], request.form['content'], request.form.get('summary', ''),
+                   request.form.get('image_url', ''), request.form.get('category', 'عام'),
+                   request.form.get('tags', ''), 'published' in request.form, post_id))
+        db.commit()
+        db.close()
+        flash('تم تحديث المقال بنجاح!', 'success')
+        return redirect(url_for('my_posts'))
+    db.close()
+    return render_template('edit_post.html', post=post)
+
+# ========== حذف مقال ==========
+@app.route('/delete-post/<int:post_id>')
+@login_required
+def delete_post(post_id):
+    db = get_db()
+    c = db.cursor()
+    c.execute('SELECT * FROM posts WHERE id = %s', (post_id,))
+    post = c.fetchone()
+    if not post:
+        db.close()
+        flash('المقال غير موجود', 'danger')
+        return redirect(url_for('index'))
+    if post['user_id'] != session['user_id'] and not session.get('is_admin'):
+        db.close()
+        flash('لا تملك صلاحية حذف هذا المقال', 'danger')
+        return redirect(url_for('index'))
+    c.execute('DELETE FROM comments WHERE post_id = %s', (post_id,))
+    c.execute('DELETE FROM likes WHERE post_id = %s', (post_id,))
+    c.execute('DELETE FROM posts WHERE id = %s', (post_id,))
+    db.commit()
+    db.close()
+    flash('تم حذف المقال بنجاح', 'success')
+    return redirect(url_for('my_posts'))
+
+# ========== ملف شخصي ==========
+@app.route('/profile')
+@login_required
+def profile():
+    db = get_db()
+    c = db.cursor()
+    c.execute('SELECT * FROM users WHERE id = %s', (session['user_id'],))
+    user = c.fetchone()
+    c.execute('SELECT COUNT(*) as c FROM posts WHERE user_id = %s', (session['user_id'],))
+    posts_count = c.fetchone()['c']
+    c.execute('SELECT COUNT(*) as c FROM comments WHERE author = %s', (session['username'],))
+    comments_count = c.fetchone()['c']
+    db.close()
+    return render_template('profile.html', user=user, posts_count=posts_count, comments_count=comments_count)
+
+@app.route('/profile/edit', methods=['GET', 'POST'])
+@login_required
+def edit_profile():
+    if request.method == 'POST':
+        db = get_db()
+        c = db.cursor()
+        c.execute('UPDATE users SET bio=%s, website=%s, avatar_url=%s WHERE id=%s',
+                  (request.form.get('bio', ''), request.form.get('website', ''),
+                   request.form.get('avatar_url', ''), session['user_id']))
+        db.commit()
+        db.close()
+        flash('تم تحديث الملف الشخصي', 'success')
+        return redirect(url_for('profile'))
+    db = get_db()
+    c = db.cursor()
+    c.execute('SELECT * FROM users WHERE id = %s', (session['user_id'],))
+    user = c.fetchone()
+    db.close()
+    return render_template('edit_profile.html', user=user)
+
+@app.route('/user/<username>')
+def user_profile(username):
+    db = get_db()
+    c = db.cursor()
+    c.execute('SELECT * FROM users WHERE username = %s', (username,))
+    user = c.fetchone()
+    if not user:
+        db.close()
+        return render_template('404.html'), 404
+    c.execute('SELECT * FROM posts WHERE user_id = %s AND published = TRUE ORDER BY created_at DESC', (user['id'],))
+    posts = c.fetchall()
+    db.close()
+    return render_template('public_profile.html', user=user, posts=posts, posts_count=len(posts))
+
+@app.errorhandler(404)
+def not_found(e):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def server_error(e):
+    return render_template('500.html'), 500
+
 if __name__ == '__main__':
-    print("=" * 50)
-    print("🎙️ بدء تشغيل مروم FM AI v3.0")
-    print("=" * 50)
-    print(f"🌐 الواجهة: https://kruri.qzz.io")
-    print(f"🔌 توثيق API: https://kruri.qzz.io/api/docs")
-    print(f"📱 API Endpoint: https://kruri.qzz.io/api/v1/chat")
-    print(f"💾 تخزين المحادثات: localStorage (في متصفح المستخدم)")
-    print("=" * 50)
-    port = int(os.environ.get('PORT', 10000))
+    init_db()
+    port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
